@@ -2,7 +2,6 @@ package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
 
 import android.app.Activity;
 import android.content.res.AssetFileDescriptor;
-import android.content.res.Resources;
 import android.media.*;
 import android.os.Bundle;
 import android.util.Log;
@@ -10,18 +9,20 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
+import com.google.common.collect.Queues;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Random;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.SynchronousQueue;
 
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements Runnable {
 
     private static final String TAG = "DecoderTest";
+    private boolean playbackStarted;
+
+    private boolean keepPlaying = true;
 
 
     @Override
@@ -30,14 +31,29 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
     }
 
+
+    private final ConcurrentLinkedQueue<short[]> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
+
+    public void run() {
+        final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT, 44100, AudioTrack.MODE_STREAM);
+
+        audioTrack.play();
+        //Keep playing data until stopped
+        while (keepPlaying) {
+            if (!decodedAudioQueue.isEmpty()) {
+                short[] data = decodedAudioQueue.poll();
+                audioTrack.write(data, 0, data.length);
+            }
+        }
+        //Stop music
+        audioTrack.stop();
+    }
+
     public void doRofl(View view) {
         try {
-            TextView rofl = (TextView) findViewById(R.id.helloWorldBanner);
+
+            final TextView rofl = (TextView) findViewById(R.id.helloWorldBanner);
             rofl.setText("ROFLBERRY PWN CAKES");
-
-
-            int decodedIdx = 0;
-            short[] decoded = new short[1542144];
 
             final AssetFileDescriptor testFd = getAssets().openFd("example1.aac");
 
@@ -52,12 +68,12 @@ public class MainActivity extends Activity {
 
 
             ByteBuffer[] codecOutputBuffers = codec.getOutputBuffers();
-            ByteBuffer[] codecInputBuffers = codec.getInputBuffers();
+            final ByteBuffer[] codecInputBuffers = codec.getInputBuffers();
 
             extractor.selectTrack(0);
             // start decoding
             final long kTimeOutUs = 5000;
-            MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+            final MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
             boolean sawInputEOS = false;
             boolean sawOutputEOS = false;
             int noOutputCounter = 0;
@@ -94,16 +110,21 @@ public class MainActivity extends Activity {
                         noOutputCounter = 0;
                     }
                     final ByteBuffer buf = codecOutputBuffers[res];
-                    if (decodedIdx + (info.size / 2) >= decoded.length) {
-                        decoded = Arrays.copyOf(decoded, decodedIdx + (info.size / 2));
-                    }
+
+                    short[] tmpData = new short[info.size];
                     for (int i = 0; i < info.size; i += 2) {
-                        decoded[decodedIdx++] = buf.getShort(i);
+                        tmpData[i] = buf.getShort(i);
                     }
+
+                    decodedAudioQueue.offer(tmpData);
                     codec.releaseOutputBuffer(res, false /* render */);
                     if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                         Log.d(TAG, "saw output EOS.");
                         sawOutputEOS = true;
+                    }
+                    if (!playbackStarted) {
+                        playbackStarted = true;
+                        new Thread(this).start();
                     }
                 } else if (res == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                     codecOutputBuffers = codec.getOutputBuffers();
@@ -117,11 +138,6 @@ public class MainActivity extends Activity {
             }
             codec.stop();
             codec.release();
-
-            final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT, 44100, AudioTrack.MODE_STREAM);
-
-            audioTrack.play();
-            audioTrack.write(decoded, 0, decoded.length);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
