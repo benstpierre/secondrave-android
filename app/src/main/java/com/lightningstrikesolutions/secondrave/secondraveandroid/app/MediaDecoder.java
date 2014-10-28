@@ -1,25 +1,12 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
 
-import android.content.Context;
-import android.content.res.AssetFileDescriptor;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
-import android.os.Environment;
 import android.util.Log;
-import com.google.common.collect.Maps;
-import com.google.common.io.ByteStreams;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.impl.client.DefaultHttpClient;
 
-import java.io.*;
-import java.net.URL;
-import java.net.URLConnection;
+import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -127,9 +114,11 @@ public class MediaDecoder implements Runnable {
                         Log.d(TAG, "dequeueOutputBuffer returned " + res);
                     }
                 }
+
                 codec.stop();
                 codec.release();
-                outputFile.delete();
+                extractor.release();
+                //outputFile.delete();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

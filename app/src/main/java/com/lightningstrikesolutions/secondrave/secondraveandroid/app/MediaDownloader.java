@@ -3,6 +3,14 @@ package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
 import android.util.Log;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
+import com.google.common.io.Files;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.StatusLine;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
 
 import java.io.*;
 import java.net.URL;
@@ -31,40 +39,35 @@ public class MediaDownloader implements Runnable {
         previousTimestamp = System.currentTimeMillis();
         while (this.keepGoing) {
             try {
-
                 if (downloadedAudioQueue.size() > 3) {
                     Thread.sleep(5000);
                     continue;
                 }
 
                 final File outputFile = File.createTempFile("prefix", "extension", cacheDir);
-                int count;
 
-                final URL url = new URL("http://192.168.1.48:8080/unodish-web-1.0/RaveService");
+                final String url = "http://10.0.1.13:8080/unodish-web-1.0/RaveService";
+                final HttpClient httpclient = new DefaultHttpClient();
+                final HttpRequest request = new HttpGet(url);
+                request.addHeader("NEWEST_SAMPLE_AFTER_INSTANT", String.valueOf(System.currentTimeMillis()));
+                final HttpResponse response = httpclient.execute(new HttpGet(url));
+                final StatusLine statusLine = response.getStatusLine();
+                if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
 
-                final Map<String, String> headers = Maps.newHashMap();
-                headers.put("NEWEST_SAMPLE_AFTER_INSTANT", String.valueOf(System.currentTimeMillis()));
-
-                final URLConnection connection = url.openConnection();
-                connection.connect();
-                final String rolf = connection.getHeaderField("PLAYAT");
-                final String berry = connection.getHeaderField("PLAYLENGTH");
-
-                // download the file
-                final InputStream input = new BufferedInputStream(url.openStream(), 8192);
-                // Output stream
-                final OutputStream output = new FileOutputStream(outputFile);
-                //Copy file
-                ByteStreams.copy(input, output);
-
-                // flushing output
-                output.flush();
-
-                // closing streams
-                output.close();
-                input.close();
-
-                downloadedAudioQueue.offer(outputFile);
+                    //final String rolf = response.getFirstHeader("PLAYAT").getValue();
+                    //final String berry = response.getFirstHeader("PLAYLENGTH").getValue();
+                    final InputStream in = response.getEntity().getContent();
+                    final OutputStream out = Files.asByteSink(outputFile).openBufferedStream();
+                    ByteStreams.copy(in, out);
+                    in.close();
+                    out.close();
+                    downloadedAudioQueue.offer(outputFile);
+                } else {
+                    outputFile.delete();
+                    //Closes the connection.
+                    response.getEntity().getContent().close();
+                    throw new IOException(statusLine.getReasonPhrase());
+                }
             } catch (Exception e) {
                 Log.e("Error: ", e.getMessage());
             }

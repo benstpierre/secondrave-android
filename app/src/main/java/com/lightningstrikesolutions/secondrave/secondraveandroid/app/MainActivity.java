@@ -9,6 +9,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import com.google.common.collect.Queues;
+import com.google.common.io.Files;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,8 +34,51 @@ public class MainActivity extends Activity {
         final MediaDownloader mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
         new Thread(mediaDownloader).start();
 
+
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                while (true) {
+//                    try {
+//                        if (downloadedAudioQueue.size() > 3) {
+//                            Thread.sleep(5000);
+//                            continue;
+//                        }
+//                        final File outputFile = File.createTempFile("prefix", "extension", getApplicationContext().getCacheDir());
+//
+//                        Files.asByteSink(outputFile).writeFrom(getAssets().openFd("sample1.mp3").createInputStream());
+//
+//                        downloadedAudioQueue.offer(outputFile);
+//                    } catch (Exception e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                }
+//            }
+//        }).start();
+
         final MediaDecoder mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);
         new Thread(mediaDecoder).start();
+
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                final Random random = new Random();
+//                while (true) {
+//                    if (decodedAudioQueue.size() > 100) {
+//                        try {
+//                            Thread.sleep(1000);
+//                        } catch (InterruptedException e) {
+//                            throw new RuntimeException(e);
+//                        }
+//                    }
+//                    final short[] bs = new short[5 * 2 * 44100];
+//                    for (int i = 0; i < bs.length; i++) {
+//                        bs[i] = (short) random.nextInt(Short.MAX_VALUE + 1);
+//                    }
+//                    decodedAudioQueue.offer(bs);
+//                }
+//            }
+//        }).start();
 
         final MediaPlayer mediaPlayer = new MediaPlayer(decodedAudioQueue);
         new Thread(mediaPlayer).start();
