@@ -25,8 +25,7 @@ public class MainActivity extends Activity {
     }
 
     public void doRofl(View view) throws IOException {
-        final AssetFileDescriptor assetFileDescriptor = getAssets().openFd("example1.aac");
-        final MediaDecoder mediaDecoder = new MediaDecoder(decodedAudioQueue, assetFileDescriptor);
+        final MediaDecoder mediaDecoder = new MediaDecoder(decodedAudioQueue, getApplicationContext());
         new Thread(mediaDecoder).start();
 
         final MediaPlayer mediaPlayer = new MediaPlayer(decodedAudioQueue);

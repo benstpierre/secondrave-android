@@ -1,13 +1,25 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
 
+import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.os.Environment;
 import android.util.Log;
+import com.google.common.collect.Maps;
+import com.google.common.io.ByteStreams;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.DefaultHttpClient;
 
-import java.io.IOException;
+import java.io.*;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.ByteBuffer;
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -19,19 +31,47 @@ public class MediaDecoder implements Runnable {
 
 
     private final ConcurrentLinkedQueue<short[]> decodedAudioQueue;
-    private final AssetFileDescriptor assetFileDescriptor;
+    private final Context applicationContext;
 
-    public MediaDecoder(ConcurrentLinkedQueue<short[]> decodedAudioQueue, AssetFileDescriptor assetFileDescriptor) {
+    public MediaDecoder(ConcurrentLinkedQueue<short[]> decodedAudioQueue, Context applicationContext) {
         this.decodedAudioQueue = decodedAudioQueue;
-        this.assetFileDescriptor = assetFileDescriptor;
+        this.applicationContext = applicationContext;
     }
 
     @Override
     public void run() {
         try {
 
+            final File outputFile = File.createTempFile("prefix", "extension", applicationContext.getCacheDir());
+            int count;
+            try {
+                final URL url = new URL("http://10.0.1.2:8080/unodish-web-1.0/RaveService");
+
+                final Map<String, String> headers = Maps.newHashMap();
+                headers.put("NEWEST_SAMPLE_AFTER_INSTANT", String.valueOf(System.currentTimeMillis()));
+
+                final URLConnection connection = url.openConnection();
+                connection.connect();
+
+                // download the file
+                final InputStream input = new BufferedInputStream(url.openStream(), 8192);
+                // Output stream
+                final OutputStream output = new FileOutputStream(outputFile);
+                //Copy file
+                ByteStreams.copy(input, output);
+
+                // flushing output
+                output.flush();
+
+                // closing streams
+                output.close();
+                input.close();
+            } catch (Exception e) {
+                Log.e("Error: ", e.getMessage());
+            }
+
             final MediaExtractor extractor = new MediaExtractor();
-            extractor.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
+            extractor.setDataSource(outputFile.getPath());
 
             final MediaFormat format = extractor.getTrackFormat(0);
             final String mime = format.getString(MediaFormat.KEY_MIME);

@@ -29,7 +29,7 @@ public class MediaPlayer implements Runnable {
             throw new RuntimeException(e);
         }
 
-        final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT, 44100, AudioTrack.MODE_STREAM);
+        final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 88200, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT, 44100, AudioTrack.MODE_STREAM);
 
         keepPlaying = true;
         audioTrack.play();
