@@ -29,17 +29,21 @@ public class MediaPlayer implements Runnable {
             throw new RuntimeException(e);
         }
 
-        final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 88200, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT, 44100, AudioTrack.MODE_STREAM);
+        final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT, 44100, AudioTrack.MODE_STREAM);
 
         keepPlaying = true;
+        audioTrack.setPlaybackRate(88200);
         audioTrack.play();
         //Keep playing data until stopped
         while (keepPlaying) {
             if (!decodedAudioQueue.isEmpty()) {
                 short[] data = decodedAudioQueue.poll();
-                if (data.length > 0)
-                    System.gc();
-                    //audioTrack.write(data, 0, data.length);
+                if (data.length > 0) {
+                    audioTrack.write(data, 0, data.length);
+                } else {
+                    System.out.println("NOTHING TO PLAY THIS IS VERY BAD");
+                }
+
             }
         }
         //Stop music

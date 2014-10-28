@@ -55,6 +55,7 @@ public class MediaDecoder implements Runnable {
                 extractor.setDataSource(outputFile.getPath());
 
                 final MediaFormat format = extractor.getTrackFormat(0);
+
                 final String mime = format.getString(MediaFormat.KEY_MIME);
                 final MediaCodec codec = MediaCodec.createDecoderByType(mime);
                 codec.configure(format, null /* surface */, null /* crypto */, 0 /* flags */);
@@ -129,7 +130,6 @@ public class MediaDecoder implements Runnable {
                 codec.stop();
                 codec.release();
                 outputFile.delete();
-                System.gc();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

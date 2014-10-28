@@ -33,7 +33,7 @@ public class MediaDownloader implements Runnable {
             try {
 
                 if (downloadedAudioQueue.size() > 3) {
-                    Thread.sleep(1000);
+                    Thread.sleep(5000);
                     continue;
                 }
 

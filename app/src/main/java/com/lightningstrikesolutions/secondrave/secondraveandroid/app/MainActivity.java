@@ -1,7 +1,9 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
 
 import android.app.Activity;
-import android.content.res.AssetFileDescriptor;
+import android.content.Context;
+import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -17,6 +19,7 @@ public class MainActivity extends Activity {
 
 
     private ConcurrentLinkedQueue<short[]> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
+    private android.media.MediaPlayer _shootMP;
 
 
     @Override
@@ -37,6 +40,17 @@ public class MainActivity extends Activity {
         new Thread(mediaPlayer).start();
     }
 
+    public void playASound(View view) throws IOException {
+        final AudioManager meng = (AudioManager) getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+        int volume = meng.getStreamVolume(AudioManager.STREAM_NOTIFICATION);
+
+        if (volume != 0) {
+            if (_shootMP == null)
+                _shootMP = android.media.MediaPlayer.create(getApplicationContext(), Uri.parse("file:///system/media/audio/ui/camera_click.ogg"));
+            if (_shootMP != null)
+                _shootMP.start();
+        }
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
