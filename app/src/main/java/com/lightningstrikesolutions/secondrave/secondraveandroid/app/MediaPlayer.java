@@ -37,7 +37,9 @@ public class MediaPlayer implements Runnable {
         while (keepPlaying) {
             if (!decodedAudioQueue.isEmpty()) {
                 short[] data = decodedAudioQueue.poll();
-                audioTrack.write(data, 0, data.length);
+                if (data.length > 0)
+                    System.gc();
+                    //audioTrack.write(data, 0, data.length);
             }
         }
         //Stop music

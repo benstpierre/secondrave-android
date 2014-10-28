@@ -31,125 +31,110 @@ public class MediaDecoder implements Runnable {
 
 
     private final ConcurrentLinkedQueue<short[]> decodedAudioQueue;
-    private final Context applicationContext;
+    private final ConcurrentLinkedQueue<File> downloadedAudioQueue;
+    private boolean keepGoing = true;
 
-    public MediaDecoder(ConcurrentLinkedQueue<short[]> decodedAudioQueue, Context applicationContext) {
+    public MediaDecoder(ConcurrentLinkedQueue<short[]> decodedAudioQueue,
+                        ConcurrentLinkedQueue<File> downloadedAudioQueue) {
         this.decodedAudioQueue = decodedAudioQueue;
-        this.applicationContext = applicationContext;
+        this.downloadedAudioQueue = downloadedAudioQueue;
     }
 
     @Override
     public void run() {
-        try {
-
-            final File outputFile = File.createTempFile("prefix", "extension", applicationContext.getCacheDir());
-            int count;
+        while (keepGoing) {
             try {
-                final URL url = new URL("http://10.0.1.2:8080/unodish-web-1.0/RaveService");
+                final File outputFile = downloadedAudioQueue.poll();
 
-                final Map<String, String> headers = Maps.newHashMap();
-                headers.put("NEWEST_SAMPLE_AFTER_INSTANT", String.valueOf(System.currentTimeMillis()));
+                if (outputFile == null || decodedAudioQueue.size() > 1000) {
+                    Thread.sleep(1000);
+                    continue;
+                }
 
-                final URLConnection connection = url.openConnection();
-                connection.connect();
+                final MediaExtractor extractor = new MediaExtractor();
+                extractor.setDataSource(outputFile.getPath());
 
-                // download the file
-                final InputStream input = new BufferedInputStream(url.openStream(), 8192);
-                // Output stream
-                final OutputStream output = new FileOutputStream(outputFile);
-                //Copy file
-                ByteStreams.copy(input, output);
+                final MediaFormat format = extractor.getTrackFormat(0);
+                final String mime = format.getString(MediaFormat.KEY_MIME);
+                final MediaCodec codec = MediaCodec.createDecoderByType(mime);
+                codec.configure(format, null /* surface */, null /* crypto */, 0 /* flags */);
+                codec.start();
 
-                // flushing output
-                output.flush();
+                ByteBuffer[] codecOutputBuffers = codec.getOutputBuffers();
+                final ByteBuffer[] codecInputBuffers = codec.getInputBuffers();
 
-                // closing streams
-                output.close();
-                input.close();
+                extractor.selectTrack(0);
+                // start decoding
+                final long kTimeOutUs = 5000;
+                final MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+                boolean sawInputEOS = false;
+                boolean sawOutputEOS = false;
+                int noOutputCounter = 0;
+                while (!sawOutputEOS && noOutputCounter < 50) {
+                    noOutputCounter++;
+                    if (!sawInputEOS) {
+                        int inputBufIndex = codec.dequeueInputBuffer(kTimeOutUs);
+                        if (inputBufIndex >= 0) {
+                            ByteBuffer dstBuf = codecInputBuffers[inputBufIndex];
+                            int sampleSize = extractor.readSampleData(dstBuf, 0 /* offset */);
+                            long presentationTimeUs = 0;
+                            if (sampleSize < 0) {
+                                Log.d(TAG, "saw input EOS.");
+                                sawInputEOS = true;
+                                sampleSize = 0;
+                            } else {
+                                presentationTimeUs = extractor.getSampleTime();
+                            }
+                            codec.queueInputBuffer(
+                                    inputBufIndex,
+                                    0 /* offset */,
+                                    sampleSize,
+                                    presentationTimeUs,
+                                    sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
+                            if (!sawInputEOS) {
+                                extractor.advance();
+                            }
+                        }
+                    }
+                    int res = codec.dequeueOutputBuffer(info, kTimeOutUs);
+                    if (res >= 0) {
+                        //Log.d(TAG, "got frame, size " + info.size + "/" + info.presentationTimeUs);
+                        if (info.size > 0) {
+                            noOutputCounter = 0;
+                        }
+                        final ByteBuffer buf = codecOutputBuffers[res];
+
+                        short[] tmpData = new short[info.size];
+                        for (int i = 0; i < info.size; i += 2) {
+                            tmpData[i] = buf.getShort(i);
+                        }
+
+                        decodedAudioQueue.offer(tmpData);
+
+                        codec.releaseOutputBuffer(res, false /* render */);
+                        if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                            Log.d(TAG, "saw output EOS.");
+                            sawOutputEOS = true;
+                        }
+                    } else if (res == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
+                        codecOutputBuffers = codec.getOutputBuffers();
+                        Log.d(TAG, "output buffers have changed.");
+                    } else if (res == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                        MediaFormat oformat = codec.getOutputFormat();
+                        Log.d(TAG, "output format has changed to " + oformat);
+                    } else {
+                        Log.d(TAG, "dequeueOutputBuffer returned " + res);
+                    }
+                }
+                codec.stop();
+                codec.release();
+                outputFile.delete();
+                System.gc();
             } catch (Exception e) {
-                Log.e("Error: ", e.getMessage());
+                throw new RuntimeException(e);
             }
-
-            final MediaExtractor extractor = new MediaExtractor();
-            extractor.setDataSource(outputFile.getPath());
-
-            final MediaFormat format = extractor.getTrackFormat(0);
-            final String mime = format.getString(MediaFormat.KEY_MIME);
-            final MediaCodec codec = MediaCodec.createDecoderByType(mime);
-            codec.configure(format, null /* surface */, null /* crypto */, 0 /* flags */);
-            codec.start();
-
-
-            ByteBuffer[] codecOutputBuffers = codec.getOutputBuffers();
-            final ByteBuffer[] codecInputBuffers = codec.getInputBuffers();
-
-            extractor.selectTrack(0);
-            // start decoding
-            final long kTimeOutUs = 5000;
-            final MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-            boolean sawInputEOS = false;
-            boolean sawOutputEOS = false;
-            int noOutputCounter = 0;
-            while (!sawOutputEOS && noOutputCounter < 50) {
-                noOutputCounter++;
-                if (!sawInputEOS) {
-                    int inputBufIndex = codec.dequeueInputBuffer(kTimeOutUs);
-                    if (inputBufIndex >= 0) {
-                        ByteBuffer dstBuf = codecInputBuffers[inputBufIndex];
-                        int sampleSize = extractor.readSampleData(dstBuf, 0 /* offset */);
-                        long presentationTimeUs = 0;
-                        if (sampleSize < 0) {
-                            Log.d(TAG, "saw input EOS.");
-                            sawInputEOS = true;
-                            sampleSize = 0;
-                        } else {
-                            presentationTimeUs = extractor.getSampleTime();
-                        }
-                        codec.queueInputBuffer(
-                                inputBufIndex,
-                                0 /* offset */,
-                                sampleSize,
-                                presentationTimeUs,
-                                sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
-                        if (!sawInputEOS) {
-                            extractor.advance();
-                        }
-                    }
-                }
-                int res = codec.dequeueOutputBuffer(info, kTimeOutUs);
-                if (res >= 0) {
-                    //Log.d(TAG, "got frame, size " + info.size + "/" + info.presentationTimeUs);
-                    if (info.size > 0) {
-                        noOutputCounter = 0;
-                    }
-                    final ByteBuffer buf = codecOutputBuffers[res];
-
-                    short[] tmpData = new short[info.size];
-                    for (int i = 0; i < info.size; i += 2) {
-                        tmpData[i] = buf.getShort(i);
-                    }
-
-                    decodedAudioQueue.offer(tmpData);
-                    codec.releaseOutputBuffer(res, false /* render */);
-                    if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                        Log.d(TAG, "saw output EOS.");
-                        sawOutputEOS = true;
-                    }
-                } else if (res == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-                    codecOutputBuffers = codec.getOutputBuffers();
-                    Log.d(TAG, "output buffers have changed.");
-                } else if (res == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                    MediaFormat oformat = codec.getOutputFormat();
-                    Log.d(TAG, "output format has changed to " + oformat);
-                } else {
-                    Log.d(TAG, "dequeueOutputBuffer returned " + res);
-                }
-            }
-            codec.stop();
-            codec.release();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
+
 
     }
 }

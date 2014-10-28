@@ -8,6 +8,7 @@ import android.view.MenuItem;
 import android.view.View;
 import com.google.common.collect.Queues;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -25,7 +26,11 @@ public class MainActivity extends Activity {
     }
 
     public void doRofl(View view) throws IOException {
-        final MediaDecoder mediaDecoder = new MediaDecoder(decodedAudioQueue, getApplicationContext());
+        final ConcurrentLinkedQueue<File> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
+        final MediaDownloader mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
+        new Thread(mediaDownloader).start();
+
+        final MediaDecoder mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);
         new Thread(mediaDecoder).start();
 
         final MediaPlayer mediaPlayer = new MediaPlayer(decodedAudioQueue);
