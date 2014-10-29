@@ -4,7 +4,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.media.AudioManager;
 import android.net.Uri;
-import android.os.Bundle;
+import android.os.*;
+import android.os.Process;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -58,15 +59,16 @@ public class MainActivity extends Activity {
         //Disable/enable buttons as needed
         btnStartTheParty.setEnabled(false);
         btnStopTheParty.setEnabled(true);
+        final ThreadGroup threadGroup = new ThreadGroup("Audio Threads");
         //Start Media Downloader
         this.mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
-        new Thread(mediaDownloader, "Media Downloader").start();
+        new Thread(threadGroup, mediaDownloader, "Media Downloader").start();
         //Start Media Decoder
         this.mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);
-        new Thread(mediaDecoder, "Media Decoder").start();
+        new Thread(threadGroup, mediaDecoder, "Media Decoder").start();
         //Start Media Player
         this.mediaPlayer = new MediaPlayer(decodedAudioQueue);
-        new Thread(mediaPlayer, "Media Player").start();
+        new Thread(threadGroup, mediaPlayer, "Media Player").start();
     }
 
     @Override

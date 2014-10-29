@@ -1,11 +1,10 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
-import android.content.res.AssetFileDescriptor;
-import android.media.*;
-import android.util.Log;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
+import android.os.Process;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -24,6 +23,7 @@ public class MediaPlayer implements Runnable {
 
     @Override
     public void run() {
+        Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
         try {
             Thread.sleep(3000L);
         } catch (InterruptedException e) {
