@@ -17,6 +17,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by benstpierre on 14-10-27.
@@ -26,7 +27,7 @@ public class MediaDownloader implements Runnable {
 
     private final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue;
     private final File cacheDir;
-    private boolean keepGoing = true;
+    private AtomicBoolean keepGoing = new AtomicBoolean();
 
     public MediaDownloader(ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue, File cacheDir) {
         this.downloadedAudioQueue = downloadedAudioQueue;
@@ -35,7 +36,8 @@ public class MediaDownloader implements Runnable {
 
     @Override
     public void run() {
-        while (this.keepGoing) {
+        this.keepGoing.set(true);
+        while (this.keepGoing.get()) {
             try {
                 if (downloadedAudioQueue.size() > 3) {
                     Thread.sleep(5000);
@@ -70,5 +72,11 @@ public class MediaDownloader implements Runnable {
                 Log.e("Error: ", e.getMessage());
             }
         }
+        System.out.println("Media Downloader is off");
+    }
+
+
+    public void stop() {
+        this.keepGoing.set(false);
     }
 }

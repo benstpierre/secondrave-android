@@ -23,80 +23,50 @@ public class MainActivity extends Activity {
 
 
     private ConcurrentLinkedQueue<short[]> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
-    private android.media.MediaPlayer _shootMP;
+    final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
+    private MediaDownloader mediaDownloader;
+    private MediaDecoder mediaDecoder;
+    private MediaPlayer mediaPlayer;
+    private View btnStartTheParty;
+    private View btnStopTheParty;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        this.btnStartTheParty = findViewById(R.id.btnStartTheParty);
+        this.btnStopTheParty = findViewById(R.id.btnStopTheParty);
     }
 
-    public void doRofl(View view) throws IOException {
-        final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
-        final MediaDownloader mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
-        new Thread(mediaDownloader).start();
 
+    public void stopTheParty(View view) throws IOException {
+        this.btnStartTheParty.setEnabled(true);
+        this.btnStopTheParty.setEnabled(false);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.mediaPlayer.stop();
+                MainActivity.this.mediaDecoder.stop();
+                MainActivity.this.mediaDownloader.stop();
+            }
+        }).start();
 
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                while (true) {
-//                    try {
-//                        if (downloadedAudioQueue.size() > 3) {
-//                            Thread.sleep(5000);
-//                            continue;
-//                        }
-//                        final File outputFile = File.createTempFile("prefix", "extension", getApplicationContext().getCacheDir());
-//
-//                        Files.asByteSink(outputFile).writeFrom(getAssets().openFd("sample1.mp3").createInputStream());
-//
-//                        downloadedAudioQueue.offer(outputFile);
-//                    } catch (Exception e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                }
-//            }
-//        }).start();
-
-        final MediaDecoder mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);
-        new Thread(mediaDecoder).start();
-
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                final Random random = new Random();
-//                while (true) {
-//                    if (decodedAudioQueue.size() > 100) {
-//                        try {
-//                            Thread.sleep(1000);
-//                        } catch (InterruptedException e) {
-//                            throw new RuntimeException(e);
-//                        }
-//                    }
-//                    final short[] bs = new short[5 * 2 * 44100];
-//                    for (int i = 0; i < bs.length; i++) {
-//                        bs[i] = (short) random.nextInt(Short.MAX_VALUE + 1);
-//                    }
-//                    decodedAudioQueue.offer(bs);
-//                }
-//            }
-//        }).start();
-
-        final MediaPlayer mediaPlayer = new MediaPlayer(decodedAudioQueue);
-        new Thread(mediaPlayer).start();
     }
 
-    public void playASound(View view) throws IOException {
-        final AudioManager meng = (AudioManager) getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-        int volume = meng.getStreamVolume(AudioManager.STREAM_NOTIFICATION);
-
-        if (volume != 0) {
-            if (_shootMP == null)
-                _shootMP = android.media.MediaPlayer.create(getApplicationContext(), Uri.parse("file:///system/media/audio/ui/camera_click.ogg"));
-            if (_shootMP != null)
-                _shootMP.start();
-        }
+    public void startTheParty(View view) throws IOException {
+        //Disable/enable buttons as needed
+        btnStartTheParty.setEnabled(false);
+        btnStopTheParty.setEnabled(true);
+        //Start Media Downloader
+        this.mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
+        new Thread(mediaDownloader, "Media Downloader").start();
+        //Start Media Decoder
+        this.mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);
+        new Thread(mediaDecoder, "Media Decoder").start();
+        //Start Media Player
+        this.mediaPlayer = new MediaPlayer(decodedAudioQueue);
+        new Thread(mediaPlayer, "Media Player").start();
     }
 
     @Override

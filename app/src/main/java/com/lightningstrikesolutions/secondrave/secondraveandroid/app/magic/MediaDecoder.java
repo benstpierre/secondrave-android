@@ -8,6 +8,7 @@ import android.util.Log;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by benstpierre on 14-10-24.
@@ -19,7 +20,7 @@ public class MediaDecoder implements Runnable {
 
     private final ConcurrentLinkedQueue<short[]> decodedAudioQueue;
     private final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue;
-    private boolean keepGoing = true;
+    private AtomicBoolean keepGoing = new AtomicBoolean();
 
     public MediaDecoder(ConcurrentLinkedQueue<short[]> decodedAudioQueue,
                         ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue) {
@@ -29,7 +30,8 @@ public class MediaDecoder implements Runnable {
 
     @Override
     public void run() {
-        while (keepGoing) {
+        keepGoing.set(true);
+        while (keepGoing.get()) {
             try {
                 final EncodedTimedAudioChunk encodedTimedAudioChunk = downloadedAudioQueue.poll();
                 final File outputFile = encodedTimedAudioChunk == null ? null : encodedTimedAudioChunk.getContentFile();
@@ -124,7 +126,9 @@ public class MediaDecoder implements Runnable {
                 throw new RuntimeException(e);
             }
         }
+    }
 
-
+    public void stop() {
+        this.keepGoing.set(false);
     }
 }
