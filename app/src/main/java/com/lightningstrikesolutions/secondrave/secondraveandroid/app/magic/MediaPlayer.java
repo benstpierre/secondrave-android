@@ -1,4 +1,4 @@
-package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
+package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
 import android.content.res.AssetFileDescriptor;
 import android.media.*;

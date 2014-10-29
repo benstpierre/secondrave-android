@@ -1,4 +1,4 @@
-package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
+package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
@@ -18,11 +18,11 @@ public class MediaDecoder implements Runnable {
 
 
     private final ConcurrentLinkedQueue<short[]> decodedAudioQueue;
-    private final ConcurrentLinkedQueue<File> downloadedAudioQueue;
+    private final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue;
     private boolean keepGoing = true;
 
     public MediaDecoder(ConcurrentLinkedQueue<short[]> decodedAudioQueue,
-                        ConcurrentLinkedQueue<File> downloadedAudioQueue) {
+                        ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue) {
         this.decodedAudioQueue = decodedAudioQueue;
         this.downloadedAudioQueue = downloadedAudioQueue;
     }
@@ -31,7 +31,8 @@ public class MediaDecoder implements Runnable {
     public void run() {
         while (keepGoing) {
             try {
-                final File outputFile = downloadedAudioQueue.poll();
+                final EncodedTimedAudioChunk encodedTimedAudioChunk = downloadedAudioQueue.poll();
+                final File outputFile = encodedTimedAudioChunk == null ? null : encodedTimedAudioChunk.getContentFile();
 
                 if (outputFile == null || decodedAudioQueue.size() > 1000) {
                     Thread.sleep(1000);

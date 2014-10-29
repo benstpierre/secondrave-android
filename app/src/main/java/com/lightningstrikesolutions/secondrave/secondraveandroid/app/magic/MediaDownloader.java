@@ -1,4 +1,4 @@
-package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
+package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
 import android.util.Log;
 import com.google.common.collect.Maps;
@@ -24,19 +24,17 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class MediaDownloader implements Runnable {
 
 
-    private final ConcurrentLinkedQueue<File> downloadedAudioQueue;
+    private final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue;
     private final File cacheDir;
     private boolean keepGoing = true;
-    private long previousTimestamp;
 
-    public MediaDownloader(ConcurrentLinkedQueue<File> downloadedAudioQueue, File cacheDir) {
+    public MediaDownloader(ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue, File cacheDir) {
         this.downloadedAudioQueue = downloadedAudioQueue;
         this.cacheDir = cacheDir;
     }
 
     @Override
     public void run() {
-        previousTimestamp = System.currentTimeMillis();
         while (this.keepGoing) {
             try {
                 if (downloadedAudioQueue.size() > 3) {
@@ -44,7 +42,7 @@ public class MediaDownloader implements Runnable {
                     continue;
                 }
 
-                final File outputFile = File.createTempFile("prefix", "extension", cacheDir);
+                final File outputFile = File.createTempFile("audiobuffer", "tmp", cacheDir);
 
                 final String url = "http://10.0.1.13:8080/unodish-web-1.0/RaveService";
                 final HttpClient httpclient = new DefaultHttpClient();
@@ -54,14 +52,14 @@ public class MediaDownloader implements Runnable {
                 final StatusLine statusLine = response.getStatusLine();
                 if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
 
-                    //final String rolf = response.getFirstHeader("PLAYAT").getValue();
-                    //final String berry = response.getFirstHeader("PLAYLENGTH").getValue();
+                    final String strPlayAt = response.getFirstHeader("PLAYAT").getValue();
+                    final String strPlayLength = response.getFirstHeader("PLAYLENGTH").getValue();
                     final InputStream in = response.getEntity().getContent();
                     final OutputStream out = Files.asByteSink(outputFile).openBufferedStream();
                     ByteStreams.copy(in, out);
                     in.close();
                     out.close();
-                    downloadedAudioQueue.offer(outputFile);
+                    downloadedAudioQueue.offer(new EncodedTimedAudioChunk(outputFile, Long.valueOf(strPlayAt), Integer.valueOf(strPlayLength)));
                 } else {
                     outputFile.delete();
                     //Closes the connection.

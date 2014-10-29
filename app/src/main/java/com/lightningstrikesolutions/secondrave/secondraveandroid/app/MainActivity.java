@@ -9,7 +9,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import com.google.common.collect.Queues;
-import com.google.common.io.Files;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.EncodedTimedAudioChunk;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.MediaDecoder;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.MediaDownloader;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.MediaPlayer;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +33,7 @@ public class MainActivity extends Activity {
     }
 
     public void doRofl(View view) throws IOException {
-        final ConcurrentLinkedQueue<File> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
+        final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
         final MediaDownloader mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
         new Thread(mediaDownloader).start();
 
