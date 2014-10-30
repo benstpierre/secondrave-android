@@ -18,8 +18,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class MainActivity extends Activity {
 
 
-    private ConcurrentLinkedQueue<short[]> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
-    final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
     private MediaDownloader mediaDownloader;
     private MediaDecoder mediaDecoder;
     private MediaPlayer mediaPlayer;
@@ -35,9 +33,7 @@ public class MainActivity extends Activity {
         this.btnStopTheParty = findViewById(R.id.btnStopTheParty);
     }
 
-
     public void stopTheParty(View view) throws IOException {
-        this.btnStartTheParty.setEnabled(true);
         this.btnStopTheParty.setEnabled(false);
         new Thread(new Runnable() {
             @Override
@@ -45,20 +41,26 @@ public class MainActivity extends Activity {
                 MainActivity.this.mediaPlayer.stop();
                 MainActivity.this.mediaDecoder.stop();
                 MainActivity.this.mediaDownloader.stop();
-                MainActivity.this.decodedAudioQueue.clear();
-                while (MainActivity.this.downloadedAudioQueue.peek() != null) {
-                    MainActivity.this.downloadedAudioQueue.poll().getContentFile().delete();
-                }
-                MainActivity.this.downloadedAudioQueue.clear();
+                //Clear does not work, we need to guaranteed these two ConcurrentLinkedQueue are clear before continuing
+                //noinspection StatementWithEmptyBody
+                //Only allow party to start when queues are purged
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        MainActivity.this.btnStartTheParty.setEnabled(true);
+                    }
+                });
             }
         }).start();
 
     }
 
     public void startTheParty(View view) throws IOException {
+        //Setup new downloaded/decoded queues
+        ConcurrentLinkedQueue<short[]> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
+        ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
         //Disable/enable buttons as needed
         btnStartTheParty.setEnabled(false);
-        btnStopTheParty.setEnabled(true);
         final ThreadGroup threadGroup = new ThreadGroup("Audio Threads");
         //Start Media Downloader
         this.mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
@@ -69,6 +71,7 @@ public class MainActivity extends Activity {
         //Start Media Player
         this.mediaPlayer = new MediaPlayer(decodedAudioQueue);
         new Thread(threadGroup, mediaPlayer, "Media Player").start();
+        btnStopTheParty.setEnabled(true);
     }
 
     @Override

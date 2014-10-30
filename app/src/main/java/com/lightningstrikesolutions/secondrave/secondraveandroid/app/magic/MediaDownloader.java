@@ -1,7 +1,6 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
 import android.util.Log;
-import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import org.apache.http.HttpRequest;
@@ -12,10 +11,10 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 
-import java.io.*;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.Map;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -72,7 +71,9 @@ public class MediaDownloader implements Runnable {
                 Log.e("Error: ", e.getMessage());
             }
         }
-        System.out.println("Media Downloader is off");
+        while (downloadedAudioQueue.peek() != null) {
+            downloadedAudioQueue.poll().getContentFile().delete();
+        }
     }
 
 
