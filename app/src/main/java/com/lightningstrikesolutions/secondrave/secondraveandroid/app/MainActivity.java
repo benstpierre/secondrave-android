@@ -1,11 +1,7 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
 
 import android.app.Activity;
-import android.content.Context;
-import android.media.AudioManager;
-import android.net.Uri;
-import android.os.*;
-import android.os.Process;
+import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -15,7 +11,6 @@ import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.Media
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.MediaDownloader;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.MediaPlayer;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -50,6 +45,11 @@ public class MainActivity extends Activity {
                 MainActivity.this.mediaPlayer.stop();
                 MainActivity.this.mediaDecoder.stop();
                 MainActivity.this.mediaDownloader.stop();
+                MainActivity.this.decodedAudioQueue.clear();
+                while (MainActivity.this.downloadedAudioQueue.peek() != null) {
+                    MainActivity.this.downloadedAudioQueue.poll().getContentFile().delete();
+                }
+                MainActivity.this.downloadedAudioQueue.clear();
             }
         }).start();
 
