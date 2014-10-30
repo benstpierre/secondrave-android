@@ -9,12 +9,12 @@ public class EncodedTimedAudioChunk {
 
 
     private File contentFile;
-    private long playAy;
+    private long playAt;
     private int lengthMS;
 
-    public EncodedTimedAudioChunk(File contentFile, long playAy, int lengthMS) {
+    public EncodedTimedAudioChunk(File contentFile, long playAt, int lengthMS) {
         this.contentFile = contentFile;
-        this.playAy = playAy;
+        this.playAt = playAt;
         this.lengthMS = lengthMS;
     }
 
@@ -26,12 +26,12 @@ public class EncodedTimedAudioChunk {
         this.contentFile = contentFile;
     }
 
-    public long getPlayAy() {
-        return playAy;
+    public long getPlayAt() {
+        return playAt;
     }
 
-    public void setPlayAy(long playAy) {
-        this.playAy = playAy;
+    public void setPlayAt(long playAt) {
+        this.playAt = playAt;
     }
 
     public int getLengthMS() {

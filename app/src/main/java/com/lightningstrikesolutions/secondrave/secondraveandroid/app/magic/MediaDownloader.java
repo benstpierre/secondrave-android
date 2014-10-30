@@ -36,6 +36,7 @@ public class MediaDownloader implements Runnable {
     @Override
     public void run() {
         this.keepGoing.set(true);
+        long previousTimeStamp = System.currentTimeMillis();
         while (this.keepGoing.get()) {
             try {
                 if (downloadedAudioQueue.size() > 3) {
@@ -47,9 +48,9 @@ public class MediaDownloader implements Runnable {
 
                 final String url = "http://192.168.1.48:8080/unodish-web-1.0/RaveService";
                 final HttpClient httpclient = new DefaultHttpClient();
-                final HttpRequest request = new HttpGet(url);
-                request.addHeader("NEWEST_SAMPLE_AFTER_INSTANT", String.valueOf(System.currentTimeMillis()));
-                final HttpResponse response = httpclient.execute(new HttpGet(url));
+                final HttpGet request = new HttpGet(url);
+                request.addHeader("NEWEST_SAMPLE_AFTER_INSTANT", String.valueOf(previousTimeStamp));
+                final HttpResponse response = httpclient.execute(request);
                 final StatusLine statusLine = response.getStatusLine();
                 if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
 
@@ -60,7 +61,9 @@ public class MediaDownloader implements Runnable {
                     ByteStreams.copy(in, out);
                     in.close();
                     out.close();
-                    downloadedAudioQueue.offer(new EncodedTimedAudioChunk(outputFile, Long.valueOf(strPlayAt), Integer.valueOf(strPlayLength)));
+                    final EncodedTimedAudioChunk encodedTimedAudioChunk = new EncodedTimedAudioChunk(outputFile, Long.valueOf(strPlayAt), Integer.valueOf(strPlayLength));
+                    previousTimeStamp = encodedTimedAudioChunk.getPlayAt();
+                    downloadedAudioQueue.offer(encodedTimedAudioChunk);
                 } else {
                     outputFile.delete();
                     //Closes the connection.
