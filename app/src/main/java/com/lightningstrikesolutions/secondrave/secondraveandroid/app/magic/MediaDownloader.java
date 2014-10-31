@@ -3,7 +3,6 @@ package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 import android.util.Log;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
-import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
@@ -39,14 +38,14 @@ public class MediaDownloader implements Runnable {
         long previousTimeStamp = System.currentTimeMillis();
         while (this.keepGoing.get()) {
             try {
-                if (downloadedAudioQueue.size() > 3) {
+                if (downloadedAudioQueue.size() > 5) {
                     Thread.sleep(5000);
                     continue;
                 }
 
                 final File outputFile = File.createTempFile("audiobuffer", "tmp", cacheDir);
 
-                final String url = "http://192.168.1.48:8080/unodish-web-1.0/RaveService";
+                final String url = "http://10.0.1.13:8080/unodish-web-1.0/RaveService";
                 final HttpClient httpclient = new DefaultHttpClient();
                 final HttpGet request = new HttpGet(url);
                 request.addHeader("NEWEST_SAMPLE_AFTER_INSTANT", String.valueOf(previousTimeStamp));
@@ -62,7 +61,7 @@ public class MediaDownloader implements Runnable {
                     in.close();
                     out.close();
                     final EncodedTimedAudioChunk encodedTimedAudioChunk = new EncodedTimedAudioChunk(outputFile, Long.valueOf(strPlayAt), Integer.valueOf(strPlayLength));
-                    previousTimeStamp = encodedTimedAudioChunk.getPlayAt();
+                    previousTimeStamp = encodedTimedAudioChunk.getPlayAt() + encodedTimedAudioChunk.getLengthMS();
                     downloadedAudioQueue.offer(encodedTimedAudioChunk);
                 } else {
                     outputFile.delete();

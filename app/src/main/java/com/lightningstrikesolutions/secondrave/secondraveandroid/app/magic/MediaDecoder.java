@@ -33,13 +33,21 @@ public class MediaDecoder implements Runnable {
         keepGoing.set(true);
         while (keepGoing.get()) {
             try {
-                final EncodedTimedAudioChunk encodedTimedAudioChunk = downloadedAudioQueue.poll();
-                final File outputFile = encodedTimedAudioChunk == null ? null : encodedTimedAudioChunk.getContentFile();
-
-                if (outputFile == null || decodedAudioQueue.size() > 1000) {
+                if (decodedAudioQueue.size() > 100) {
                     Thread.sleep(1000);
                     continue;
                 }
+
+                if (downloadedAudioQueue.isEmpty()) {
+                    Thread.sleep(1000);
+                    continue;
+                }
+
+                final EncodedTimedAudioChunk encodedTimedAudioChunk = downloadedAudioQueue.poll();
+                if (encodedTimedAudioChunk == null) {
+                    throw new RuntimeException("Null Encoded Audio piece");
+                }
+                final File outputFile = encodedTimedAudioChunk.getContentFile();
 
                 final MediaExtractor extractor = new MediaExtractor();
                 extractor.setDataSource(outputFile.getPath());
