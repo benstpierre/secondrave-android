@@ -14,10 +14,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MediaPlayer implements Runnable {
 
 
-    private final ConcurrentLinkedQueue<short[]> decodedAudioQueue;
+    private final ConcurrentLinkedQueue<byte[]> decodedAudioQueue;
     private final AtomicBoolean keepPlaying = new AtomicBoolean();
 
-    public MediaPlayer(ConcurrentLinkedQueue<short[]> decodedAudioQueue) {
+    public MediaPlayer(ConcurrentLinkedQueue<byte[]> decodedAudioQueue) {
         this.decodedAudioQueue = decodedAudioQueue;
     }
 
@@ -29,14 +29,19 @@ public class MediaPlayer implements Runnable {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT, 44100, AudioTrack.MODE_STREAM);
+        final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
+                44100,
+                AudioFormat.CHANNEL_OUT_STEREO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT),
+                AudioTrack.MODE_STREAM);
         keepPlaying.set(true);
-        audioTrack.setPlaybackRate(88200);
+        audioTrack.setPlaybackRate(44100);
         audioTrack.play();
         //Keep playing data until stopped
         while (keepPlaying.get()) {
             if (!decodedAudioQueue.isEmpty()) {
-                short[] data = decodedAudioQueue.poll();
+                byte[] data = decodedAudioQueue.poll();
                 if (data.length > 0) {
                     audioTrack.write(data, 0, data.length);
                 } else {

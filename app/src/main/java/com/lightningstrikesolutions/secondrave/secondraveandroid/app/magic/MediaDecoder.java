@@ -18,11 +18,11 @@ public class MediaDecoder implements Runnable {
     private static final String TAG = "MediaDecoder";
 
 
-    private final ConcurrentLinkedQueue<short[]> decodedAudioQueue;
+    private final ConcurrentLinkedQueue<byte[]> decodedAudioQueue;
     private final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue;
     private AtomicBoolean keepGoing = new AtomicBoolean();
 
-    public MediaDecoder(ConcurrentLinkedQueue<short[]> decodedAudioQueue,
+    public MediaDecoder(ConcurrentLinkedQueue<byte[]> decodedAudioQueue,
                         ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue) {
         this.decodedAudioQueue = decodedAudioQueue;
         this.downloadedAudioQueue = downloadedAudioQueue;
@@ -74,7 +74,7 @@ public class MediaDecoder implements Runnable {
                     if (!sawInputEOS) {
                         int inputBufIndex = codec.dequeueInputBuffer(kTimeOutUs);
                         if (inputBufIndex >= 0) {
-                            ByteBuffer dstBuf = codecInputBuffers[inputBufIndex];
+                            final ByteBuffer dstBuf = codecInputBuffers[inputBufIndex];
                             int sampleSize = extractor.readSampleData(dstBuf, 0 /* offset */);
                             long presentationTimeUs = 0;
                             if (sampleSize < 0) {
@@ -103,9 +103,9 @@ public class MediaDecoder implements Runnable {
                         }
                         final ByteBuffer buf = codecOutputBuffers[res];
 
-                        short[] tmpData = new short[info.size];
-                        for (int i = 0; i < info.size; i += 2) {
-                            tmpData[i] = buf.getShort(i);
+                        byte[] tmpData = new byte[info.size];
+                        for (int i = 0; i < info.size; i++) {
+                            tmpData[i] = buf.get(i);
                         }
 
                         decodedAudioQueue.offer(tmpData);

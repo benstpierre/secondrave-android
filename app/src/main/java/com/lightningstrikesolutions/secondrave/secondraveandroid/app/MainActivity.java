@@ -57,7 +57,7 @@ public class MainActivity extends Activity {
 
     public void startTheParty(View view) throws IOException {
         //Setup new downloaded/decoded queues
-        ConcurrentLinkedQueue<short[]> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
+        ConcurrentLinkedQueue<byte[]> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
         ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
         //Disable/enable buttons as needed
         btnStartTheParty.setEnabled(false);
