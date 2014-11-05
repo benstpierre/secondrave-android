@@ -6,10 +6,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import com.google.common.collect.Queues;
-import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.EncodedTimedAudioChunk;
-import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.MediaDecoder;
-import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.MediaDownloader;
-import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.MediaPlayer;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.*;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -57,7 +54,7 @@ public class MainActivity extends Activity {
 
     public void startTheParty(View view) throws IOException {
         //Setup new downloaded/decoded queues
-        ConcurrentLinkedQueue<byte[]> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
+        ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
         ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
         //Disable/enable buttons as needed
         btnStartTheParty.setEnabled(false);

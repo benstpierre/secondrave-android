@@ -52,15 +52,14 @@ public class MediaDownloader implements Runnable {
                 final HttpResponse response = httpclient.execute(request);
                 final StatusLine statusLine = response.getStatusLine();
                 if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-
-                    final String strPlayAt = response.getFirstHeader("PLAYAT").getValue();
-                    final String strPlayLength = response.getFirstHeader("PLAYLENGTH").getValue();
+                    final long playClipAt = Long.valueOf(response.getFirstHeader("PLAYAT").getValue());
+                    final int clipLength = Integer.valueOf(response.getFirstHeader("PLAYLENGTH").getValue());
                     final InputStream in = response.getEntity().getContent();
                     final OutputStream out = Files.asByteSink(outputFile).openBufferedStream();
                     ByteStreams.copy(in, out);
                     in.close();
                     out.close();
-                    final EncodedTimedAudioChunk encodedTimedAudioChunk = new EncodedTimedAudioChunk(outputFile, Long.valueOf(strPlayAt), Integer.valueOf(strPlayLength));
+                    final EncodedTimedAudioChunk encodedTimedAudioChunk = new EncodedTimedAudioChunk(outputFile, playClipAt, clipLength);
                     previousTimeStamp = encodedTimedAudioChunk.getPlayAt() + encodedTimedAudioChunk.getLengthMS();
                     downloadedAudioQueue.offer(encodedTimedAudioChunk);
                 } else {

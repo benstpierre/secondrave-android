@@ -18,11 +18,11 @@ public class MediaDecoder implements Runnable {
     private static final String TAG = "MediaDecoder";
 
 
-    private final ConcurrentLinkedQueue<byte[]> decodedAudioQueue;
+    private final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue;
     private final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue;
     private AtomicBoolean keepGoing = new AtomicBoolean();
 
-    public MediaDecoder(ConcurrentLinkedQueue<byte[]> decodedAudioQueue,
+    public MediaDecoder(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue,
                         ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue) {
         this.decodedAudioQueue = decodedAudioQueue;
         this.downloadedAudioQueue = downloadedAudioQueue;
@@ -108,7 +108,7 @@ public class MediaDecoder implements Runnable {
                             tmpData[i] = buf.get(i);
                         }
 
-                        decodedAudioQueue.offer(tmpData);
+                        decodedAudioQueue.offer(new DecodedTimedAudioChunk(tmpData, encodedTimedAudioChunk.getPlayAt(), encodedTimedAudioChunk.getLengthMS()));
 
                         codec.releaseOutputBuffer(res, false /* render */);
                         if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
