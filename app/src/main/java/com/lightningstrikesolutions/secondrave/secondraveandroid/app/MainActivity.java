@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 import com.google.common.collect.Queues;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.*;
 
@@ -20,6 +21,7 @@ public class MainActivity extends Activity {
     private MediaPlayer mediaPlayer;
     private View btnStartTheParty;
     private View btnStopTheParty;
+    private TextView txtDelay;
 
 
     @Override
@@ -28,6 +30,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         this.btnStartTheParty = findViewById(R.id.btnStartTheParty);
         this.btnStopTheParty = findViewById(R.id.btnStopTheParty);
+        this.txtDelay = (TextView) findViewById(R.id.txtDelay);
     }
 
     public void stopTheParty(View view) throws IOException {
@@ -67,8 +70,21 @@ public class MainActivity extends Activity {
         this.mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);
         new Thread(threadGroup, mediaDecoder, "Media Decoder").start();
         //Start Media Player
-        this.mediaPlayer = new MediaPlayer(decodedAudioQueue);
+        this.mediaPlayer = new MediaPlayer(decodedAudioQueue, this);
         new Thread(threadGroup, mediaPlayer, "Media Player").start();
+    }
+
+
+    public void setDelay(final int delay, final int speedChange, final MediaPlayer.Speed speed) {
+        MainActivity.this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                txtDelay.setText("Behind by=\n" + delay + " ms\n"
+                                + "Change=\n" + speedChange + "hz\n"
+                                + "Running=\n" + speed.name()
+                );
+            }
+        });
     }
 
     @Override

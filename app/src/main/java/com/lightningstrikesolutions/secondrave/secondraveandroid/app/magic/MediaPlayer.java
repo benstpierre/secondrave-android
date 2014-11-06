@@ -4,7 +4,7 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Process;
-import android.util.Log;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -18,9 +18,11 @@ public class MediaPlayer implements Runnable {
     private static final String TAG = "MediaPlayer";
     private final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue;
     private final AtomicBoolean keepPlaying = new AtomicBoolean();
+    private final MainActivity mainActivity;
 
-    public MediaPlayer(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue) {
+    public MediaPlayer(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity) {
         this.decodedAudioQueue = decodedAudioQueue;
+        this.mainActivity = mainActivity;
     }
 
     @Override
@@ -57,20 +59,18 @@ public class MediaPlayer implements Runnable {
                     final int timeLeft = (int) (theoreticalEndTime - now);
                     final int speedChange = extraSamplesToPlay * 1000 / timeLeft;
 
-                    Log.i(TAG, "Theo Speed change is " + speedChange);
-
-                    if (speedChange > 3000) {
+                    if (speedChange > 5000) {
                         if (speed != Speed.Fast) {
                             speed = Speed.Fast;
-                            audioTrack.setPlaybackRate(44100 + 3000);
+                            audioTrack.setPlaybackRate(44100 + 5000);
                         }
-                    } else if (speedChange < -3000) {
+                    } else if (speedChange < -5000) {
                         if (speed != Speed.Slow) {
                             speed = Speed.Slow;
-                            audioTrack.setPlaybackRate(44100 - 3000);
+                            audioTrack.setPlaybackRate(44100 - 5000);
                         }
                     } else {
-                        if (Math.abs(speedChange) < 1000) {
+                        if (Math.abs(speedChange) > 500) {
                             speed = Speed.Custom;
                             audioTrack.setPlaybackRate(44100 + speedChange);
                         } else {
@@ -80,6 +80,8 @@ public class MediaPlayer implements Runnable {
                             }
                         }
                     }
+
+                    mainActivity.setDelay((int) deltaTime, speedChange, speed);
                 }
                 final byte[] data = decodedTimedAudioChunk.getPcmData();
                 if (data.length > 0) {
