@@ -69,6 +69,7 @@ public class MediaDecoder implements Runnable {
                 boolean sawInputEOS = false;
                 boolean sawOutputEOS = false;
                 int noOutputCounter = 0;
+                boolean isFirstSampleInChunk = true;
                 while (!sawOutputEOS && noOutputCounter < 50) {
                     noOutputCounter++;
                     if (!sawInputEOS) {
@@ -108,7 +109,8 @@ public class MediaDecoder implements Runnable {
                             tmpData[i] = buf.get(i);
                         }
 
-                        decodedAudioQueue.offer(new DecodedTimedAudioChunk(tmpData, encodedTimedAudioChunk.getPlayAt(), encodedTimedAudioChunk.getLengthMS()));
+                        decodedAudioQueue.offer(new DecodedTimedAudioChunk(tmpData, encodedTimedAudioChunk.getPlayAt(), encodedTimedAudioChunk.getLengthMS(), isFirstSampleInChunk));
+                        isFirstSampleInChunk = false;
 
                         codec.releaseOutputBuffer(res, false /* render */);
                         if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {

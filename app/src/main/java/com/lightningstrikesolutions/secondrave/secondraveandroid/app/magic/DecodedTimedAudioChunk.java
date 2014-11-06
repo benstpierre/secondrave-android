@@ -6,6 +6,7 @@ package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 public class DecodedTimedAudioChunk {
 
 
+    private boolean isFirstSampleInChunk;
     private byte[] pcmData;
     private long playAt;
     private int lengthMS;
@@ -13,10 +14,19 @@ public class DecodedTimedAudioChunk {
     public DecodedTimedAudioChunk() {
     }
 
-    public DecodedTimedAudioChunk(byte[] pcmData, long playAt, int lengthMS) {
+    public DecodedTimedAudioChunk(byte[] pcmData, long playAt, int lengthMS, boolean isFirstSampleInChunk) {
         this.pcmData = pcmData;
         this.playAt = playAt;
         this.lengthMS = lengthMS;
+        this.isFirstSampleInChunk = isFirstSampleInChunk;
+    }
+
+    public boolean isFirstSampleInChunk() {
+        return isFirstSampleInChunk;
+    }
+
+    public void setFirstSampleInChunk(boolean isFirstSampleInChunk) {
+        this.isFirstSampleInChunk = isFirstSampleInChunk;
     }
 
     public byte[] getPcmData() {
