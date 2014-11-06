@@ -58,6 +58,7 @@ public class MainActivity extends Activity {
         ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
         //Disable/enable buttons as needed
         btnStartTheParty.setEnabled(false);
+        btnStopTheParty.setEnabled(true);
         final ThreadGroup threadGroup = new ThreadGroup("Audio Threads");
         //Start Media Downloader
         this.mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
@@ -68,7 +69,6 @@ public class MainActivity extends Activity {
         //Start Media Player
         this.mediaPlayer = new MediaPlayer(decodedAudioQueue);
         new Thread(threadGroup, mediaPlayer, "Media Player").start();
-        btnStopTheParty.setEnabled(true);
     }
 
     @Override
