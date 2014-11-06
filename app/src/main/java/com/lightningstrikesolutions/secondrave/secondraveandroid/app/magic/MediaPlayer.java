@@ -41,6 +41,7 @@ public class MediaPlayer implements Runnable {
         audioTrack.setPlaybackRate(44100);
         audioTrack.play();
         //Keep playing data until stopped
+        Speed speed = Speed.GoodEnough;
         while (keepPlaying.get()) {
             if (!decodedAudioQueue.isEmpty()) {
                 final DecodedTimedAudioChunk decodedTimedAudioChunk = decodedAudioQueue.poll();
@@ -57,12 +58,27 @@ public class MediaPlayer implements Runnable {
                     final int speedChange = extraSamplesToPlay * 1000 / timeLeft;
 
                     Log.i(TAG, "Theo Speed change is " + speedChange);
+
                     if (speedChange > 3000) {
-                        audioTrack.setPlaybackRate(44100 + 3000);
+                        if (speed != Speed.Fast) {
+                            speed = Speed.Fast;
+                            audioTrack.setPlaybackRate(44100 + 3000);
+                        }
                     } else if (speedChange < -3000) {
-                        audioTrack.setPlaybackRate(44100 - 3000);
+                        if (speed != Speed.Slow) {
+                            speed = Speed.Slow;
+                            audioTrack.setPlaybackRate(44100 - 3000);
+                        }
                     } else {
-                        audioTrack.setPlaybackRate(44100 + speedChange);
+                        if (Math.abs(speedChange) < 1000) {
+                            speed = Speed.Custom;
+                            audioTrack.setPlaybackRate(44100 + speedChange);
+                        } else {
+                            if (speed != Speed.GoodEnough) {
+                                speed = Speed.GoodEnough;
+                                audioTrack.setPlaybackRate(44100);
+                            }
+                        }
                     }
                 }
                 final byte[] data = decodedTimedAudioChunk.getPcmData();
@@ -76,6 +92,14 @@ public class MediaPlayer implements Runnable {
         //Stop music
         audioTrack.stop();
     }
+
+    public enum Speed {
+        Fast,
+        Slow,
+        Custom,
+        GoodEnough
+    }
+
 
     public void stop() {
         keepPlaying.set(false);
