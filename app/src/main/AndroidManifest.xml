@@ -3,6 +3,7 @@
     package="com.lightningstrikesolutions.secondrave.secondraveandroid.app" >
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-feature android:name="android.hardware.audio.low_latency"/>
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"

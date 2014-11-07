@@ -19,10 +19,12 @@ public class MediaPlayer implements Runnable {
     private final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue;
     private final AtomicBoolean keepPlaying = new AtomicBoolean();
     private final MainActivity mainActivity;
+    private final int driverDelayMs;
 
-    public MediaPlayer(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity) {
+    public MediaPlayer(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity, int driverDelayMs) {
         this.decodedAudioQueue = decodedAudioQueue;
         this.mainActivity = mainActivity;
+        this.driverDelayMs = driverDelayMs;
     }
 
     @Override
@@ -48,7 +50,8 @@ public class MediaPlayer implements Runnable {
             if (!decodedAudioQueue.isEmpty()) {
                 final DecodedTimedAudioChunk decodedTimedAudioChunk = decodedAudioQueue.poll();
                 if (decodedTimedAudioChunk.isFirstSampleInChunk()) {
-                    final long now = System.currentTimeMillis();
+                    long now = System.currentTimeMillis();
+                    now = now + driverDelayMs;
                     final long theoreticalEndTime = decodedTimedAudioChunk.getPlayAt() + decodedTimedAudioChunk.getLengthMS();
                     final long actualEndTimeAt1XSpeed = now + decodedTimedAudioChunk.getLengthMS();
                     final long deltaTime = actualEndTimeAt1XSpeed - theoreticalEndTime;

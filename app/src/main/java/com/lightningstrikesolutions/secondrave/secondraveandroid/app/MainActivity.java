@@ -1,7 +1,10 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
 
 import android.app.Activity;
+import android.content.Context;
+import android.media.AudioManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -10,10 +13,13 @@ import com.google.common.collect.Queues;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.*;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 
 public class MainActivity extends Activity {
+
+    private static final String TAG = "MainActivity";
 
 
     private MediaDownloader mediaDownloader;
@@ -22,6 +28,7 @@ public class MainActivity extends Activity {
     private View btnStartTheParty;
     private View btnStopTheParty;
     private TextView txtDelay;
+    private int audioLatency;
 
 
     @Override
@@ -31,6 +38,8 @@ public class MainActivity extends Activity {
         this.btnStartTheParty = findViewById(R.id.btnStartTheParty);
         this.btnStopTheParty = findViewById(R.id.btnStopTheParty);
         this.txtDelay = (TextView) findViewById(R.id.txtDelay);
+        this.audioLatency = getAudioLatency();
+        Log.e(TAG, "AudioLatency is " + audioLatency);
     }
 
     public void stopTheParty(View view) throws IOException {
@@ -55,6 +64,16 @@ public class MainActivity extends Activity {
 
     }
 
+    public int getAudioLatency() {
+        AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        try {
+            Method m = am.getClass().getMethod("getOutputLatency", int.class);
+            return (Integer) m.invoke(am, AudioManager.STREAM_MUSIC);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     public void startTheParty(View view) throws IOException {
         //Setup new downloaded/decoded queues
         ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
@@ -70,7 +89,7 @@ public class MainActivity extends Activity {
         this.mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);
         new Thread(threadGroup, mediaDecoder, "Media Decoder").start();
         //Start Media Player
-        this.mediaPlayer = new MediaPlayer(decodedAudioQueue, this);
+        this.mediaPlayer = new MediaPlayer(decodedAudioQueue, this, audioLatency);
         new Thread(threadGroup, mediaPlayer, "Media Player").start();
     }
 
@@ -79,9 +98,9 @@ public class MainActivity extends Activity {
         MainActivity.this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                txtDelay.setText("Behind by=\n" + delay + " ms\n"
-                                + "Change=\n" + speedChange + "hz\n"
-                                + "Running=\n" + speed.name()
+                txtDelay.setText("Behind=" + delay + " ms\n"
+                                + "Change=" + speedChange + "hz\n"
+                                + "Running=" + speed.name()
                 );
             }
         });
