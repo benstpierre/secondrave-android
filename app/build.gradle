@@ -35,5 +35,4 @@ dependencies {
     // You must install or update the Support Repository through the SDK manager to use this dependency.
     compile 'com.android.support:appcompat-v7:19.+'
     compile 'com.google.guava:guava:18.0'
-    compile files('libs/TarsosDSP-Android-2.0.jar')
 }
