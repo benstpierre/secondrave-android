@@ -94,13 +94,12 @@ public class MainActivity extends Activity {
     }
 
 
-    public void setDelay(final int delay, final int speedChange, final MediaPlayer.Speed speed) {
+    public void setDelay(final int delay, final int speedChange) {
         MainActivity.this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 txtDelay.setText("Behind=" + delay + " ms\n"
                                 + "Change=" + speedChange + "hz\n"
-                                + "Running=" + speed.name()
                 );
             }
         });
