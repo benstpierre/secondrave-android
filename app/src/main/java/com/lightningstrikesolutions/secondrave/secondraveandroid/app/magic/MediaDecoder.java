@@ -1,12 +1,10 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
-import android.media.MediaCodec;
-import android.media.MediaExtractor;
-import android.media.MediaFormat;
-import android.util.Log;
+import com.google.common.io.ByteSource;
+import com.google.common.io.Files;
 
 import java.io.File;
-import java.nio.ByteBuffer;
+import java.io.InputStream;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -49,89 +47,32 @@ public class MediaDecoder implements Runnable {
                 }
                 final File outputFile = encodedTimedAudioChunk.getContentFile();
 
-                final MediaExtractor extractor = new MediaExtractor();
-                extractor.setDataSource(outputFile.getPath());
+                final ByteSource bs = Files.asByteSource(outputFile);
 
-                final MediaFormat format = extractor.getTrackFormat(0);
+                final InputStream inputStream = bs.openBufferedStream();
 
-                final String mime = format.getString(MediaFormat.KEY_MIME);
-                final MediaCodec codec = MediaCodec.createDecoderByType(mime);
-                codec.configure(format, null /* surface */, null /* crypto */, 0 /* flags */);
-                codec.start();
-
-                ByteBuffer[] codecOutputBuffers = codec.getOutputBuffers();
-                final ByteBuffer[] codecInputBuffers = codec.getInputBuffers();
-
-                extractor.selectTrack(0);
-                // start decoding
-                final long kTimeOutUs = 5000;
-                final MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-                boolean sawInputEOS = false;
-                boolean sawOutputEOS = false;
-                int noOutputCounter = 0;
                 boolean isFirstSampleInChunk = true;
-                while (!sawOutputEOS && noOutputCounter < 50) {
-                    noOutputCounter++;
-                    if (!sawInputEOS) {
-                        int inputBufIndex = codec.dequeueInputBuffer(kTimeOutUs);
-                        if (inputBufIndex >= 0) {
-                            final ByteBuffer dstBuf = codecInputBuffers[inputBufIndex];
-                            int sampleSize = extractor.readSampleData(dstBuf, 0 /* offset */);
-                            long presentationTimeUs = 0;
-                            if (sampleSize < 0) {
-                                Log.d(TAG, "saw input EOS.");
-                                sawInputEOS = true;
-                                sampleSize = 0;
-                            } else {
-                                presentationTimeUs = extractor.getSampleTime();
-                            }
-                            codec.queueInputBuffer(
-                                    inputBufIndex,
-                                    0 /* offset */,
-                                    sampleSize,
-                                    presentationTimeUs,
-                                    sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
-                            if (!sawInputEOS) {
-                                extractor.advance();
-                            }
-                        }
+
+                int bytesRead = 0;
+                while (bytesRead != -1) {
+                    final byte[] tmpData = new byte[4000];
+                    bytesRead = inputStream.read(tmpData);
+                    if (bytesRead == -1) {
+                        continue;
                     }
-                    int res = codec.dequeueOutputBuffer(info, kTimeOutUs);
-                    if (res >= 0) {
-                        //Log.d(TAG, "got frame, size " + info.size + "/" + info.presentationTimeUs);
-                        if (info.size > 0) {
-                            noOutputCounter = 0;
-                        }
-                        final ByteBuffer buf = codecOutputBuffers[res];
-
-                        byte[] tmpData = new byte[info.size];
-                        for (int i = 0; i < info.size; i++) {
-                            tmpData[i] = buf.get(i);
-                        }
-
-                        decodedAudioQueue.offer(new DecodedTimedAudioChunk(tmpData, encodedTimedAudioChunk.getPlayAt(), encodedTimedAudioChunk.getLengthMS(), isFirstSampleInChunk));
-                        isFirstSampleInChunk = false;
-
-                        codec.releaseOutputBuffer(res, false /* render */);
-                        if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                            Log.d(TAG, "saw output EOS.");
-                            sawOutputEOS = true;
-                        }
-                    } else if (res == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-                        codecOutputBuffers = codec.getOutputBuffers();
-                        Log.d(TAG, "output buffers have changed.");
-                    } else if (res == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                        MediaFormat oformat = codec.getOutputFormat();
-                        Log.d(TAG, "output format has changed to " + oformat);
+                    byte[] tmpData2;
+                    if (bytesRead < 4000) {
+                        tmpData2 = new byte[bytesRead];
+                        System.arraycopy(tmpData, 0, tmpData, 0, bytesRead);
                     } else {
-                        Log.d(TAG, "dequeueOutputBuffer returned " + res);
+                        tmpData2 = tmpData;
                     }
+                    decodedAudioQueue.offer(new DecodedTimedAudioChunk(tmpData2, encodedTimedAudioChunk.getPlayAt(), encodedTimedAudioChunk.getLengthMS(), isFirstSampleInChunk));
+                    isFirstSampleInChunk = false;
                 }
 
-                codec.stop();
-                codec.release();
-                extractor.release();
-                //outputFile.delete();
+                inputStream.close();
+                outputFile.delete();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
