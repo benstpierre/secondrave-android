@@ -48,7 +48,7 @@ public class MediaPlayer implements Runnable {
         //Keep playing data until stopped
         while (keepPlaying.get()) {
             if (!decodedAudioQueue.isEmpty()) {
-                final DecodedTimedAudioChunk decodedTimedAudioChunk = decodedAudioQueue.poll();
+                final DecodedTimedAudioChunk decodedTimedAudioChunk = decodedAudioQueue.peek(); //do not poll the queue until we know we have useful sample
                 if (decodedTimedAudioChunk.isFirstSampleInChunk()) {
                     long now = System.currentTimeMillis();
                     //now = now + driverDelayMs;
@@ -56,14 +56,27 @@ public class MediaPlayer implements Runnable {
                     final long theoreticalEndTime = decodedTimedAudioChunk.getPlayAt() + decodedTimedAudioChunk.getLengthMS();
                     final long actualEndTimeAt1XSpeed = now + decodedTimedAudioChunk.getLengthMS();
                     final long deltaTime = actualEndTimeAt1XSpeed - theoreticalEndTime;
-                    if (deltaTime > 5000) {
+                    //determine if you are too far ahead or behind
+                    if (deltaTime > 3000) {
+                        decodedAudioQueue.poll();//toss this sample, you are too far behind
                         continue;
+                    } else if (deltaTime < -500) {
+                        try {
+                            Thread.sleep(100);  //sleep and try again
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                        continue;
+                    } else {
+                        decodedAudioQueue.poll(); // poll this as its going to actually get used
                     }
                     final int extraSamplesToPlay = (int) (deltaTime * 44100 / 1000);
                     final int timeLeft = (int) (theoreticalEndTime - now);
                     final int speedChange = extraSamplesToPlay * 1000 / timeLeft;
                     this.modifiedSpeed = 44100 - speedChange;
                     mainActivity.setDelay((int) deltaTime, modifiedSpeed);
+                } else {
+                    decodedAudioQueue.poll();
                 }
                 final byte[] data = decodedTimedAudioChunk.getPcmData();
                 if (data.length > 0) {
