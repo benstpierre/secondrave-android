@@ -25,10 +25,12 @@ public class MainActivity extends Activity {
     private MediaDownloader mediaDownloader;
     private MediaDecoder mediaDecoder;
     private MediaPlayer mediaPlayer;
+    private ClockService clockService;
     private View btnStartTheParty;
     private View btnStopTheParty;
     private TextView txtDelay;
     private int audioLatency;
+    private int currentChunk;
 
 
     @Override
@@ -47,6 +49,7 @@ public class MainActivity extends Activity {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                MainActivity.this.clockService.stop();
                 MainActivity.this.mediaPlayer.stop();
                 MainActivity.this.mediaDecoder.stop();
                 MainActivity.this.mediaDownloader.stop();
@@ -81,6 +84,10 @@ public class MainActivity extends Activity {
         //Disable/enable buttons as needed
         btnStartTheParty.setEnabled(false);
         btnStopTheParty.setEnabled(true);
+
+        this.clockService = new ClockService();
+        new Thread(clockService).start();
+
         final ThreadGroup threadGroup = new ThreadGroup("Audio Threads");
         //Start Media Downloader
         this.mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
@@ -89,17 +96,20 @@ public class MainActivity extends Activity {
         this.mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);
         new Thread(threadGroup, mediaDecoder, "Media Decoder").start();
         //Start Media Player
-        this.mediaPlayer = new MediaPlayer(decodedAudioQueue, this, audioLatency);
+        this.mediaPlayer = new MediaPlayer(decodedAudioQueue, this, audioLatency, clockService);
         new Thread(threadGroup, mediaPlayer, "Media Player").start();
     }
 
 
     public void setDelay(final int delay, final int speedChange) {
+        this.currentChunk++;
         MainActivity.this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                txtDelay.setText("Behind=" + delay + " ms\n"
+                txtDelay.setText("Chunk=" + currentChunk + "\n"
+                                + "Behind=" + delay + " ms\n"
                                 + "Change=" + speedChange + "hz\n"
+                                + "NtpOffset= " + MainActivity.this.clockService.getClockOffset()
                 );
             }
         });

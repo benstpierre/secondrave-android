@@ -4,6 +4,7 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Process;
+import android.util.Log;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.resampler.Resampler;
 
@@ -21,12 +22,19 @@ public class MediaPlayer implements Runnable {
     private final AtomicBoolean keepPlaying = new AtomicBoolean();
     private final MainActivity mainActivity;
     private final int driverDelayMs;
+    private final ClockService clockService;
     private int modifiedSpeed;
 
-    public MediaPlayer(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity, int driverDelayMs) {
+    public MediaPlayer(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity, int driverDelayMs, ClockService clockService) {
         this.decodedAudioQueue = decodedAudioQueue;
         this.mainActivity = mainActivity;
         this.driverDelayMs = driverDelayMs;
+        this.clockService = clockService;
+    }
+
+
+    private long now() {
+        return System.currentTimeMillis() + clockService.getClockOffset();
     }
 
     @Override
@@ -50,8 +58,7 @@ public class MediaPlayer implements Runnable {
             if (!decodedAudioQueue.isEmpty()) {
                 final DecodedTimedAudioChunk decodedTimedAudioChunk = decodedAudioQueue.peek(); //do not poll the queue until we know we have useful sample
                 if (decodedTimedAudioChunk.isFirstSampleInChunk()) {
-                    long now = System.currentTimeMillis();
-                    //now = now + driverDelayMs;
+                    final long now = now();
 
                     final long theoreticalEndTime = decodedTimedAudioChunk.getPlayAt() + decodedTimedAudioChunk.getLengthMS();
                     final long actualEndTimeAt1XSpeed = now + decodedTimedAudioChunk.getLengthMS();
@@ -80,11 +87,14 @@ public class MediaPlayer implements Runnable {
                 }
                 final byte[] data = decodedTimedAudioChunk.getPcmData();
                 if (data.length > 0) {
-                    byte[] newSamples = new Resampler().reSample(data, 16, 44100, modifiedSpeed);
-
-                    audioTrack.write(newSamples, 0, newSamples.length);
+                    if (modifiedSpeed < 4410) {
+                        continue;
+                    } else {
+                        byte[] newSamples = new Resampler().reSample(data, 16, 44100, modifiedSpeed);
+                        audioTrack.write(newSamples, 0, newSamples.length);
+                    }
                 } else {
-                    System.out.println("NOTHING TO PLAY THIS IS VERY BAD");
+                    Log.w(TAG, "No audio samples to play");
                 }
             }
         }
