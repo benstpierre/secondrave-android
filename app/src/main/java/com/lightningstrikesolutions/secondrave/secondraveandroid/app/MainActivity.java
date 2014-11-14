@@ -1,20 +1,13 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
 
 import android.app.Activity;
-import android.content.Context;
-import android.media.AudioManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
-import com.google.common.collect.Queues;
-import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.*;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 
 public class MainActivity extends Activity {
@@ -22,15 +15,12 @@ public class MainActivity extends Activity {
     private static final String TAG = "MainActivity";
 
 
-    private MediaDownloader mediaDownloader;
-    private MediaDecoder mediaDecoder;
-    private MediaPlayer mediaPlayer;
-    private ClockService clockService;
     private View btnStartTheParty;
     private View btnStopTheParty;
     private TextView txtDelay;
     private int audioLatency;
     private int currentChunk;
+    private SecondRaveApplication application;
 
 
     @Override
@@ -40,76 +30,60 @@ public class MainActivity extends Activity {
         this.btnStartTheParty = findViewById(R.id.btnStartTheParty);
         this.btnStopTheParty = findViewById(R.id.btnStopTheParty);
         this.txtDelay = (TextView) findViewById(R.id.txtDelay);
-        this.audioLatency = getAudioLatency();
-        Log.e(TAG, "AudioLatency is " + audioLatency);
+        this.application = (SecondRaveApplication) getApplication();
+        if (this.application.getMediaPlayer() != null) {
+            this.application.getMediaPlayer().setActivity(this);
+        }
+        bindUi();
+    }
+
+    private void bindUi() {
+        MainActivity.this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.btnStartTheParty.setEnabled(!application.getPartyStarted().get() && !application.getPartyChanging().get());
+                MainActivity.this.btnStopTheParty.setEnabled(application.getPartyStarted().get() && !application.getPartyChanging().get());
+            }
+        });
     }
 
     public void stopTheParty(View view) throws IOException {
-        this.btnStopTheParty.setEnabled(false);
+        this.application.getPartyChanging().set(true);
+        this.application.getPartyStarted().set(false);
+        bindUi();
         new Thread(new Runnable() {
             @Override
             public void run() {
-                MainActivity.this.clockService.stop();
-                MainActivity.this.mediaPlayer.stop();
-                MainActivity.this.mediaDecoder.stop();
-                MainActivity.this.mediaDownloader.stop();
-                //Clear does not work, we need to guaranteed these two ConcurrentLinkedQueue are clear before continuing
-                //noinspection StatementWithEmptyBody
-                //Only allow party to start when queues are purged
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        MainActivity.this.btnStartTheParty.setEnabled(true);
-                    }
-                });
+                MainActivity.this.application.stopTheParty();
+                bindUi();
             }
         }).start();
-
     }
 
-    public int getAudioLatency() {
-        AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        try {
-            Method m = am.getClass().getMethod("getOutputLatency", int.class);
-            return (Integer) m.invoke(am, AudioManager.STREAM_MUSIC);
-        } catch (Exception e) {
-            return 0;
-        }
-    }
 
     public void startTheParty(View view) throws IOException {
-        //Setup new downloaded/decoded queues
-        ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
-        ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
-        //Disable/enable buttons as needed
-        btnStartTheParty.setEnabled(false);
-        btnStopTheParty.setEnabled(true);
-
-        this.clockService = new ClockService();
-        new Thread(clockService).start();
-
-        final ThreadGroup threadGroup = new ThreadGroup("Audio Threads");
-        //Start Media Downloader
-        this.mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
-        new Thread(threadGroup, mediaDownloader, "Media Downloader").start();
-        //Start Media Decoder
-        this.mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);
-        new Thread(threadGroup, mediaDecoder, "Media Decoder").start();
-        //Start Media Player
-        this.mediaPlayer = new MediaPlayer(decodedAudioQueue, this, audioLatency, clockService);
-        new Thread(threadGroup, mediaPlayer, "Media Player").start();
+        this.application.getPartyChanging().set(true);
+        this.application.getPartyStarted().set(true);
+        bindUi();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.application.startTheParty(MainActivity.this);
+                bindUi();
+            }
+        }).start();
     }
 
 
-    public void setDelay(final int delay, final int speedChange) {
+    public void setDelay(final int delay, final int speedChange, final long clockOffset) {
         this.currentChunk++;
         MainActivity.this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                txtDelay.setText("Chunk=" + currentChunk + "\n"
+                MainActivity.this.txtDelay.setText("Chunk=" + currentChunk + "\n"
                                 + "Behind=" + delay + " ms\n"
                                 + "Change=" + speedChange + "hz\n"
-                                + "NtpOffset= " + MainActivity.this.clockService.getClockOffset()
+                                + "NtpOffset= " + clockOffset
                 );
             }
         });

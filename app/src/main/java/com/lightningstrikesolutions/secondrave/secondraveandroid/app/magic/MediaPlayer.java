@@ -20,7 +20,7 @@ public class MediaPlayer implements Runnable {
     private static final String TAG = "MediaPlayer";
     private final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue;
     private final AtomicBoolean keepPlaying = new AtomicBoolean();
-    private final MainActivity mainActivity;
+    private MainActivity mainActivity;
     private final int driverDelayMs;
     private final ClockService clockService;
     private int modifiedSpeed;
@@ -81,7 +81,9 @@ public class MediaPlayer implements Runnable {
                     final int timeLeft = (int) (theoreticalEndTime - now);
                     final int speedChange = extraSamplesToPlay * 1000 / timeLeft;
                     this.modifiedSpeed = 44100 - speedChange;
-                    mainActivity.setDelay((int) deltaTime, modifiedSpeed);
+                    if (mainActivity != null) {
+                        mainActivity.setDelay((int) deltaTime, modifiedSpeed, clockService.getClockOffset());
+                    }
                 } else {
                     decodedAudioQueue.poll();
                 }
@@ -107,4 +109,7 @@ public class MediaPlayer implements Runnable {
         keepPlaying.set(false);
     }
 
+    public synchronized void setActivity(MainActivity mainActivity) {
+        this.mainActivity = mainActivity;
+    }
 }
