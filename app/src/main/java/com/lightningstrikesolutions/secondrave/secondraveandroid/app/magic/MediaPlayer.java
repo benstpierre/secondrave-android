@@ -24,6 +24,7 @@ public class MediaPlayer implements Runnable {
     private final int driverDelayMs;
     private final ClockService clockService;
     private int modifiedSpeed;
+    private int currentChunk;
 
     public MediaPlayer(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity, int driverDelayMs, ClockService clockService) {
         this.decodedAudioQueue = decodedAudioQueue;
@@ -58,6 +59,7 @@ public class MediaPlayer implements Runnable {
             if (!decodedAudioQueue.isEmpty()) {
                 final DecodedTimedAudioChunk decodedTimedAudioChunk = decodedAudioQueue.peek(); //do not poll the queue until we know we have useful sample
                 if (decodedTimedAudioChunk.isFirstSampleInChunk()) {
+                    this.currentChunk++;
                     final long now = now();
 
                     final long theoreticalEndTime = decodedTimedAudioChunk.getPlayAt() + decodedTimedAudioChunk.getLengthMS();
@@ -82,7 +84,7 @@ public class MediaPlayer implements Runnable {
                     final int speedChange = extraSamplesToPlay * 1000 / timeLeft;
                     this.modifiedSpeed = 44100 - speedChange;
                     if (mainActivity != null) {
-                        mainActivity.setDelay((int) deltaTime, modifiedSpeed, clockService.getClockOffset());
+                        mainActivity.setDelay((int) deltaTime, modifiedSpeed, clockService.getClockOffset(), currentChunk);
                     }
                 } else {
                     decodedAudioQueue.poll();

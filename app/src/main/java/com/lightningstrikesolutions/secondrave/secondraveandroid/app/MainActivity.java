@@ -13,13 +13,12 @@ import java.io.IOException;
 public class MainActivity extends Activity {
 
     private static final String TAG = "MainActivity";
+    private static final String DIAGNOSTICS_STRING = "DIAGNOSTICS_STRING";
 
 
     private View btnStartTheParty;
     private View btnStopTheParty;
     private TextView txtDelay;
-    private int audioLatency;
-    private int currentChunk;
     private SecondRaveApplication application;
 
 
@@ -35,6 +34,16 @@ public class MainActivity extends Activity {
             this.application.getMediaPlayer().setActivity(this);
         }
         bindUi();
+        if (savedInstanceState != null) {
+            final String diagnosticsString = savedInstanceState.getString(DIAGNOSTICS_STRING);
+            this.txtDelay.setText(diagnosticsString == null ? "" : diagnosticsString);
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(DIAGNOSTICS_STRING, String.valueOf(this.txtDelay.getText()));
     }
 
     private void bindUi() {
@@ -43,6 +52,9 @@ public class MainActivity extends Activity {
             public void run() {
                 MainActivity.this.btnStartTheParty.setEnabled(!application.getPartyStarted().get() && !application.getPartyChanging().get());
                 MainActivity.this.btnStopTheParty.setEnabled(application.getPartyStarted().get() && !application.getPartyChanging().get());
+                if (!application.getPartyStarted().get()) {
+                    MainActivity.this.txtDelay.setText("");
+                }
             }
         });
     }
@@ -75,16 +87,15 @@ public class MainActivity extends Activity {
     }
 
 
-    public void setDelay(final int delay, final int speedChange, final long clockOffset) {
-        this.currentChunk++;
+    public void setDelay(final int delay, final int speedChange, final long clockOffset, final int currentChunk) {
         MainActivity.this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                MainActivity.this.txtDelay.setText("Chunk=" + currentChunk + "\n"
-                                + "Behind=" + delay + " ms\n"
-                                + "Change=" + speedChange + "hz\n"
-                                + "NtpOffset= " + clockOffset
-                );
+                final String diagnostics = "Chunk=" + currentChunk + "\n"
+                        + "Behind=" + delay + " ms\n"
+                        + "Change=" + speedChange + "hz\n"
+                        + "NtpOffset= " + clockOffset;
+                MainActivity.this.txtDelay.setText(diagnostics);
             }
         });
     }
