@@ -19,10 +19,10 @@ public class ClockService implements Runnable {
     private AtomicBoolean keepGoing = new AtomicBoolean(true);
     private AtomicLong clockOffset = new AtomicLong(0);
     private static final String NTP_HOST = "2.north-america.pool.ntp.org";
+    private final long audioCardDelay;
 
-
-    public static void main(String[] args) {
-        new ClockService().run();
+    public ClockService(long audioCardDelay) {
+        this.audioCardDelay = audioCardDelay;
     }
 
     @Override
@@ -40,7 +40,7 @@ public class ClockService implements Runnable {
     }
 
     public Long getClockOffset() {
-        return clockOffset.get();
+        return clockOffset.get() + audioCardDelay;
     }
 
     public void timeTCP(String host) throws IOException {

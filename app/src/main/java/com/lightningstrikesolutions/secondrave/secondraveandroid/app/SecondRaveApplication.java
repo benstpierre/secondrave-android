@@ -101,7 +101,7 @@ public class SecondRaveApplication extends Application {
         final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
         final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
 
-        this.clockService = new ClockService();
+        this.clockService = new ClockService(this.getAudioLatency());
         new Thread(clockService).start();
 
         final ThreadGroup threadGroup = new ThreadGroup("Audio Threads");
