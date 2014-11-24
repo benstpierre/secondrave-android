@@ -1,6 +1,7 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
 import android.util.Log;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
 import org.apache.commons.net.ntp.NTPUDPClient;
 import org.apache.commons.net.ntp.TimeInfo;
 
@@ -18,7 +19,7 @@ public class ClockService implements Runnable {
     private static final String TAG = "ClockService";
     private AtomicBoolean keepGoing = new AtomicBoolean(true);
     private AtomicLong clockOffset = new AtomicLong(0);
-    private static final String NTP_HOST = "2.north-america.pool.ntp.org";
+    private static final String NTP_HOST = MainActivity.HOST;
     private final long audioCardDelay;
 
     public ClockService(long audioCardDelay) {

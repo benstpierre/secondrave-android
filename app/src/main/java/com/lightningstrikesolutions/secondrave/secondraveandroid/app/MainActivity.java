@@ -14,6 +14,7 @@ public class MainActivity extends Activity {
 
     private static final String TAG = "MainActivity";
     private static final String DIAGNOSTICS_STRING = "DIAGNOSTICS_STRING";
+    public static final String HOST = "10.0.1.13";
 
 
     private View btnStartTheParty;

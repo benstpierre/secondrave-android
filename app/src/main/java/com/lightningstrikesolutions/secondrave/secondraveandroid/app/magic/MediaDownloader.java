@@ -3,6 +3,7 @@ package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 import android.util.Log;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
@@ -45,7 +46,7 @@ public class MediaDownloader implements Runnable {
 
                 final File outputFile = File.createTempFile("audiobuffer", "tmp", cacheDir);
 
-                final String url = "http://192.168.1.48:8080/unodish-web-1.0/RaveService";
+                final String url = "http://" + MainActivity.HOST + ":8080/unodish-web-1.0/RaveService";
                 final HttpClient httpclient = new DefaultHttpClient();
                 final HttpGet request = new HttpGet(url);
                 request.addHeader("NEWEST_SAMPLE_AFTER_INSTANT", String.valueOf(previousTimeStamp));
