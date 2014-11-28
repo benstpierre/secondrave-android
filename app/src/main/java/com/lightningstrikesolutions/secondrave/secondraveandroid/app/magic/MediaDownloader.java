@@ -26,11 +26,13 @@ public class MediaDownloader implements Runnable {
 
     private final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue;
     private final File cacheDir;
+    private final ClockService clockService;
     private AtomicBoolean keepGoing = new AtomicBoolean();
 
-    public MediaDownloader(ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue, File cacheDir) {
+    public MediaDownloader(ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue, File cacheDir, ClockService clockService) {
         this.downloadedAudioQueue = downloadedAudioQueue;
         this.cacheDir = cacheDir;
+        this.clockService = clockService;
     }
 
     @Override
@@ -39,8 +41,8 @@ public class MediaDownloader implements Runnable {
         long previousTimeStamp = System.currentTimeMillis();
         while (this.keepGoing.get()) {
             try {
-                if (downloadedAudioQueue.size() > 5) {
-                    Thread.sleep(5000);
+                if (downloadedAudioQueue.size() > 3) {
+                    Thread.sleep(500);
                     continue;
                 }
 

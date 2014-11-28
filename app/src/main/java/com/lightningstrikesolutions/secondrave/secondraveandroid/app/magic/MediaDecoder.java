@@ -31,7 +31,7 @@ public class MediaDecoder implements Runnable {
         keepGoing.set(true);
         while (keepGoing.get()) {
             try {
-                if (decodedAudioQueue.size() > 1500) {
+                if (decodedAudioQueue.size() > 200) {
                     Thread.sleep(1000);
                     continue;
                 }

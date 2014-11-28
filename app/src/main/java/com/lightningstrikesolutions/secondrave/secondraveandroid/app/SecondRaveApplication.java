@@ -106,7 +106,7 @@ public class SecondRaveApplication extends Application {
 
         final ThreadGroup threadGroup = new ThreadGroup("Audio Threads");
         //Start Media Downloader
-        this.mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir());
+        this.mediaDownloader = new MediaDownloader(downloadedAudioQueue, getApplicationContext().getCacheDir(), clockService);
         new Thread(threadGroup, mediaDownloader, "Media Downloader").start();
         //Start Media Decoder
         this.mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);

@@ -69,4 +69,9 @@ public class ClockService implements Runnable {
     public void stop() {
         keepGoing.set(false);
     }
+
+    public long getTime() {
+        final long offset = getClockOffset();
+        return System.currentTimeMillis() + offset;
+    }
 }
