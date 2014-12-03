@@ -1,22 +1,17 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
-import android.util.Log;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Files;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.koushikdutta.async.ByteBufferList;
+import com.koushikdutta.async.DataEmitter;
+import com.koushikdutta.async.callback.DataCallback;
+import com.koushikdutta.async.future.Future;
+import com.koushikdutta.async.http.AsyncHttpClient;
+import com.koushikdutta.async.http.WebSocket;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.StatusLine;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import com.secondrave.protos.SecondRaveProtos;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by benstpierre on 14-10-27.
@@ -24,64 +19,50 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MediaDownloader implements Runnable {
 
 
-    private final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue;
-    private final File cacheDir;
-    private final ClockService clockService;
-    private AtomicBoolean keepGoing = new AtomicBoolean();
+    private final ConcurrentLinkedQueue<SecondRaveProtos.AudioPiece> downloadedAudioQueue;
+    private Future<WebSocket> webSocket;
 
-    public MediaDownloader(ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue, File cacheDir, ClockService clockService) {
+    public MediaDownloader(ConcurrentLinkedQueue<SecondRaveProtos.AudioPiece> downloadedAudioQueue) {
         this.downloadedAudioQueue = downloadedAudioQueue;
-        this.cacheDir = cacheDir;
-        this.clockService = clockService;
     }
 
     @Override
     public void run() {
-        this.keepGoing.set(true);
-        long previousTimeStamp = System.currentTimeMillis();
-        while (this.keepGoing.get()) {
-            try {
-                if (downloadedAudioQueue.size() > 3) {
-                    Thread.sleep(500);
-                    continue;
+        final String url = "http://" + MainActivity.HOST + ":8080/events";
+        this.webSocket = AsyncHttpClient.getDefaultInstance().websocket(url, "my-protocol", new AsyncHttpClient.WebSocketConnectCallback() {
+            @Override
+            public void onCompleted(Exception ex, WebSocket webSocket) {
+                if (ex != null) {
+                    ex.printStackTrace();
+                    return;
                 }
-
-                final File outputFile = File.createTempFile("audiobuffer", "tmp", cacheDir);
-
-                final String url = "http://" + MainActivity.HOST + ":8080/unodish-web-1.0/RaveService";
-                final HttpClient httpclient = new DefaultHttpClient();
-                final HttpGet request = new HttpGet(url);
-                request.addHeader("NEWEST_SAMPLE_AFTER_INSTANT", String.valueOf(previousTimeStamp));
-                final HttpResponse response = httpclient.execute(request);
-                final StatusLine statusLine = response.getStatusLine();
-                if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
-                    final long playClipAt = Long.valueOf(response.getFirstHeader("PLAYAT").getValue());
-                    final int clipLength = Integer.valueOf(response.getFirstHeader("PLAYLENGTH").getValue());
-                    final InputStream in = response.getEntity().getContent();
-                    final OutputStream out = Files.asByteSink(outputFile).openBufferedStream();
-                    ByteStreams.copy(in, out);
-                    in.close();
-                    out.close();
-                    final EncodedTimedAudioChunk encodedTimedAudioChunk = new EncodedTimedAudioChunk(outputFile, playClipAt, clipLength);
-                    previousTimeStamp = encodedTimedAudioChunk.getPlayAt() + encodedTimedAudioChunk.getLengthMS();
-                    downloadedAudioQueue.offer(encodedTimedAudioChunk);
-                } else {
-                    outputFile.delete();
-                    //Closes the connection.
-                    response.getEntity().getContent().close();
-                    throw new IOException(statusLine.getReasonPhrase());
-                }
-            } catch (Exception e) {
-                Log.e("Error: ", e.getMessage());
+                webSocket.setStringCallback(new WebSocket.StringCallback() {
+                    @Override
+                    public void onStringAvailable(String s) {
+                        System.out.println("I got a string: " + s);
+                    }
+                });
+                webSocket.setDataCallback(new DataCallback() {
+                    @Override
+                    public void onDataAvailable(DataEmitter emitter, ByteBufferList bb) {
+                        final ByteString byteString = ByteString.copyFrom(bb.getAll());
+                        try {
+                            downloadedAudioQueue.offer(SecondRaveProtos.AudioPiece.parseFrom(byteString));
+                        } catch (InvalidProtocolBufferException e) {
+                            e.printStackTrace();
+                        } finally {
+                            bb.recycle();
+                        }
+                    }
+                });
             }
-        }
-        while (downloadedAudioQueue.peek() != null) {
-            downloadedAudioQueue.poll().getContentFile().delete();
-        }
+        });
     }
 
 
     public void stop() {
-        this.keepGoing.set(false);
+        this.webSocket.cancel();
+        downloadedAudioQueue.clear();
     }
+
 }

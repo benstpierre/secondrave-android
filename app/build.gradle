@@ -36,4 +36,6 @@ dependencies {
     compile 'com.android.support:appcompat-v7:19.+'
     compile 'com.google.guava:guava:18.0'
     compile 'commons-net:commons-net:3.3'
+    compile 'com.google.protobuf:protobuf-java:2.6.1'
+    compile 'com.koushikdutta.async:androidasync:2.0.1'
 }

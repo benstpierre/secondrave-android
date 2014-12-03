@@ -1,9 +1,7 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
-import com.google.common.io.ByteSource;
-import com.google.common.io.Files;
+import com.secondrave.protos.SecondRaveProtos;
 
-import java.io.File;
 import java.io.InputStream;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -17,11 +15,11 @@ public class MediaDecoder implements Runnable {
 
 
     private final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue;
-    private final ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue;
+    private final ConcurrentLinkedQueue<SecondRaveProtos.AudioPiece> downloadedAudioQueue;
     private AtomicBoolean keepGoing = new AtomicBoolean();
 
     public MediaDecoder(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue,
-                        ConcurrentLinkedQueue<EncodedTimedAudioChunk> downloadedAudioQueue) {
+                        ConcurrentLinkedQueue<SecondRaveProtos.AudioPiece> downloadedAudioQueue) {
         this.decodedAudioQueue = decodedAudioQueue;
         this.downloadedAudioQueue = downloadedAudioQueue;
     }
@@ -41,15 +39,12 @@ public class MediaDecoder implements Runnable {
                     continue;
                 }
 
-                final EncodedTimedAudioChunk encodedTimedAudioChunk = downloadedAudioQueue.poll();
+                final SecondRaveProtos.AudioPiece encodedTimedAudioChunk = downloadedAudioQueue.poll();
                 if (encodedTimedAudioChunk == null) {
                     throw new RuntimeException("Null Encoded Audio piece");
                 }
-                final File outputFile = encodedTimedAudioChunk.getContentFile();
 
-                final ByteSource bs = Files.asByteSource(outputFile);
-
-                final InputStream inputStream = bs.openBufferedStream();
+                final InputStream inputStream = encodedTimedAudioChunk.getAudioData().newInput();
 
                 boolean isFirstSampleInChunk = true;
 
@@ -67,12 +62,11 @@ public class MediaDecoder implements Runnable {
                     } else {
                         tmpData2 = tmpData;
                     }
-                    decodedAudioQueue.offer(new DecodedTimedAudioChunk(tmpData2, encodedTimedAudioChunk.getPlayAt(), encodedTimedAudioChunk.getLengthMS(), isFirstSampleInChunk));
+                    decodedAudioQueue.offer(new DecodedTimedAudioChunk(tmpData2, encodedTimedAudioChunk.getPlayAt(), encodedTimedAudioChunk.getDuration(), isFirstSampleInChunk));
                     isFirstSampleInChunk = false;
                 }
 
                 inputStream.close();
-                outputFile.delete();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
