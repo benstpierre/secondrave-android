@@ -88,13 +88,13 @@ public class MainActivity extends Activity {
     }
 
 
-    public void setDelay(final int delay, final int speedChange, final long clockOffset, final int currentChunk) {
+    public void setDelay(final int error, final int speedChange, final long clockOffset, final int currentChunk) {
         MainActivity.this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final String diagnostics = "Chunk=" + currentChunk + "\n"
-                        + "Behind=" + delay + " ms\n"
-                        + "Change=" + speedChange + "hz\n"
+                final String diagnostics = "Chunk=#" + currentChunk + "\n"
+                        + "Error=" + error + " ms\n"
+                        + "Correction=" + speedChange + "hz\n"
                         + "NtpOffset= " + clockOffset;
                 MainActivity.this.txtDelay.setText(diagnostics);
             }

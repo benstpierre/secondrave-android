@@ -4,7 +4,6 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Process;
-import android.util.Log;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.resampler.Resampler;
 
@@ -38,6 +37,36 @@ public class MediaPlayer implements Runnable {
         return System.currentTimeMillis() + clockService.getClockOffset();
     }
 
+    private static final int MAX_CORRECTION = 44100 / 2;
+    private static final int MIN_CORRECTION = -1 * 44100 / 2;
+    private static final double P_GAIN = 0.5;
+    private static final double I_GAIN = 0.1;
+    private static final double D_GAIN = 0.1;
+
+    private long cumulativeError;
+    private long lastError;
+
+    private int doPid(long error) {
+        //Calculate p correction
+        final double pCorrection = P_GAIN * error;
+        //Calculate i correction
+        this.cumulativeError = cumulativeError + error;
+        final double iCorrection = I_GAIN * cumulativeError;
+        //Calculate p correction
+        final long slope = error - lastError;
+        final double dCorrection = slope * D_GAIN;
+        this.lastError = error; // save error for next loop
+        final double pidCorrection = pCorrection + iCorrection + dCorrection;
+
+        if (pidCorrection > MAX_CORRECTION) {
+            return MAX_CORRECTION;
+        } else if (pidCorrection < MIN_CORRECTION) {
+            return MIN_CORRECTION;
+        } else {
+            return (int) pidCorrection;
+        }
+    }
+
     @Override
     public void run() {
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
@@ -60,46 +89,37 @@ public class MediaPlayer implements Runnable {
                 final DecodedTimedAudioChunk decodedTimedAudioChunk = decodedAudioQueue.peek(); //do not poll the queue until we know we have useful sample
                 if (decodedTimedAudioChunk.isFirstSampleInChunk()) {
                     this.currentChunk++;
+                    //Get current corrected time
                     final long now = now();
+                    //Calculate error
+                    final long error = 0 - (now - decodedTimedAudioChunk.getPlayAt());
+                    //Calculations for skipping clips (when too far behind), sleeping (when too far ahead), or re-sampling (for small differences)
 
-                    final long theoreticalEndTime = decodedTimedAudioChunk.getPlayAt() + decodedTimedAudioChunk.getLengthMS();
-                    final long actualEndTimeAt1XSpeed = now + decodedTimedAudioChunk.getLengthMS();
-                    final long deltaTime = actualEndTimeAt1XSpeed - theoreticalEndTime;
-                    //determine if you are too far ahead or behind
-                    if (deltaTime > 3000) {
-                        decodedAudioQueue.poll();//toss this sample, you are too far behind
-                        continue;
-                    } else if (deltaTime < -500) {
+
+//                    if (error < -1500) { //Skip clip if too far behind
+//                        decodedAudioQueue.poll();
+//                        continue;
+//                    } else
+
+                    if (error > 1500) { //Sleep and try again if you are too far off
                         try {
-                            Thread.sleep(100);  //sleep and try again
+                            Thread.sleep(1000);
+                            continue;
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
                         }
-                        continue;
                     } else {
-                        decodedAudioQueue.poll(); // poll this as its going to actually get used
+                        //Calculations to do re-sampling in order to fix small errors
+                        final int correction = doPid(error);
+                        this.modifiedSpeed = 44100 + correction;
+                        if (mainActivity != null) {
+                            mainActivity.setDelay((int) lastError, correction, clockService.getClockOffset(), currentChunk);
+                        }
                     }
-                    final int extraSamplesToPlay = (int) (deltaTime * 44100 / 1000);
-                    final int timeLeft = (int) (theoreticalEndTime - now);
-                    final int speedChange = extraSamplesToPlay * 1000 / timeLeft;
-                    this.modifiedSpeed = 44100 - speedChange;
-                    if (mainActivity != null) {
-                        mainActivity.setDelay((int) deltaTime, modifiedSpeed, clockService.getClockOffset(), currentChunk);
-                    }
-                } else {
-                    decodedAudioQueue.poll();
                 }
-                final byte[] data = decodedTimedAudioChunk.getPcmData();
-                if (data.length > 0) {
-                    if (modifiedSpeed < 4410) {
-                        continue;
-                    } else {
-                        byte[] newSamples = new Resampler().reSample(data, 16, 44100, modifiedSpeed);
-                        audioTrack.write(newSamples, 0, newSamples.length);
-                    }
-                } else {
-                    Log.w(TAG, "No audio samples to play");
-                }
+                decodedAudioQueue.poll();//Remove the head of the queue as we are about to play the audio chunk
+                final byte[] resampledAudio = new Resampler().reSample(decodedTimedAudioChunk.getPcmData(), 16, 44100, modifiedSpeed);
+                audioTrack.write(resampledAudio, 0, resampledAudio.length);
             }
         }
         //Stop music
