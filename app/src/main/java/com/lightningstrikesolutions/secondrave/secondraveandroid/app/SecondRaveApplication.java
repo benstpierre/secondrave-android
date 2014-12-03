@@ -6,7 +6,6 @@ import android.media.AudioManager;
 import android.util.Log;
 import com.google.common.collect.Queues;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.*;
-import com.secondrave.protos.SecondRaveProtos;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -19,7 +18,6 @@ public class SecondRaveApplication extends Application {
 
     private static final String TAG = "SecondRaveApplication";
     private MediaDownloader mediaDownloader;
-    private MediaDecoder mediaDecoder;
     private MediaPlayer mediaPlayer;
     private ClockService clockService;
     private final AtomicBoolean partyStarted = new AtomicBoolean(false);
@@ -55,14 +53,6 @@ public class SecondRaveApplication extends Application {
         this.mediaDownloader = mediaDownloader;
     }
 
-    public MediaDecoder getMediaDecoder() {
-        return mediaDecoder;
-    }
-
-    public void setMediaDecoder(MediaDecoder mediaDecoder) {
-        this.mediaDecoder = mediaDecoder;
-    }
-
     public MediaPlayer getMediaPlayer() {
         return mediaPlayer;
     }
@@ -86,8 +76,6 @@ public class SecondRaveApplication extends Application {
             this.clockService = null;
             this.mediaPlayer.stop();
             this.mediaPlayer = null;
-            this.mediaDecoder.stop();
-            this.mediaDecoder = null;
             this.mediaDownloader.stop();
             this.mediaDownloader = null;
         }
@@ -98,20 +86,16 @@ public class SecondRaveApplication extends Application {
     public void startTheParty(MainActivity mainActivity) {
         this.partyChanging.set(true);
         this.partyStarted.set(true);
-        //Setup new downloaded/decoded queues
+        //Setup new decoded audio queue
         final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
-        final ConcurrentLinkedQueue<SecondRaveProtos.AudioPiece> downloadedAudioQueue = Queues.newConcurrentLinkedQueue();
 
         this.clockService = new ClockService(this.getAudioLatency());
         new Thread(clockService).start();
 
         final ThreadGroup threadGroup = new ThreadGroup("Audio Threads");
-        //Start Media Downloader
-        this.mediaDownloader = new MediaDownloader(downloadedAudioQueue);
+        //Start Media Downloader/decoder
+        this.mediaDownloader = new MediaDownloader(decodedAudioQueue);
         new Thread(threadGroup, mediaDownloader, "Media Downloader").start();
-        //Start Media Decoder
-        this.mediaDecoder = new MediaDecoder(decodedAudioQueue, downloadedAudioQueue);
-        new Thread(threadGroup, mediaDecoder, "Media Decoder").start();
         //Start Media Player
         this.mediaPlayer = new MediaPlayer(decodedAudioQueue, mainActivity, getAudioLatency(), clockService);
         new Thread(threadGroup, mediaPlayer, "Media Player").start();
