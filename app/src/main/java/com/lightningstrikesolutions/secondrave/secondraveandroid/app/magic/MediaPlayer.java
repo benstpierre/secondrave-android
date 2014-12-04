@@ -120,7 +120,7 @@ public class MediaPlayer implements Runnable {
                     }
                 }
                 decodedAudioQueue.poll();//Remove the head of the queue as we are about to play the audio chunk
-                final byte[] resampledAudio = new Resampler().reSample(decodedTimedAudioChunk.getPcmData(), 16, 44100, modifiedSpeed);
+                final byte[] resampledAudio = new Resampler().reSample(decodedTimedAudioChunk.getPcmData(), 2, 16, 44100, modifiedSpeed);
                 audioTrack.write(resampledAudio, 0, resampledAudio.length);
             }
         }

@@ -16,6 +16,10 @@
 
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.resampler;
 
+import com.google.common.collect.Lists;
+
+import java.util.List;
+
 /**
  * Resample signal data (base on bytes)
  *
@@ -35,10 +39,21 @@ public class Resampler {
      * @param targetRate    Sample rate of the target data
      * @return re-sampled data
      */
-    public byte[] reSample(byte[] sourceData, int bitsPerSample, int sourceRate, int targetRate) {
-
+    public byte[] reSample(byte[] sourceData, int channels, int bitsPerSample, int sourceRate, int targetRate) {
         // make the bytes to amplitudes first
-        int bytePerSample = bitsPerSample / 8;
+        final int bytePerSample = bitsPerSample / 8;
+
+        final List<byte[]> sourceDataByChannel = Lists.newArrayList();
+        for (int channel = 0; channel < channels; channel++) {
+            final byte[] currentChannelData = new byte[(sourceData.length / channels)];
+            int index = 0;
+            for (int j = channel; j < sourceData.length - 1; j += bytePerSample) {
+                currentChannelData[index] = sourceData[j];
+                currentChannelData[index++] = sourceData[j + 1];
+            }
+            sourceDataByChannel.add(currentChannelData);
+        }
+
         int numSamples = sourceData.length / bytePerSample;
         short[] amplitudes = new short[numSamples];     // 16 bit, use a short to store
 
@@ -79,7 +94,6 @@ public class Resampler {
                 bytes[i * 2 + 1] = (byte) ((targetSample[i] >> 8) & 0xff);
             }
         }
-        // end convert the amplitude to bytes
 
         return bytes;
     }
