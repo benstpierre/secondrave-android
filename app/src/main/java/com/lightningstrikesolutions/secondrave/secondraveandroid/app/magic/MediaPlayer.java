@@ -39,9 +39,9 @@ public class MediaPlayer implements Runnable {
 
     private static final int MAX_CORRECTION = 44100 / 2;
     private static final int MIN_CORRECTION = -1 * 44100 / 2;
-    private static final double P_GAIN = 0.5;
-    private static final double I_GAIN = 0.1;
-    private static final double D_GAIN = 0.1;
+    private static final double P_GAIN = 0.3;
+    private static final double I_GAIN = 0.0;
+    private static final double D_GAIN = 0.0;
 
     private long cumulativeError;
     private long lastError;
@@ -111,9 +111,9 @@ public class MediaPlayer implements Runnable {
                     } else {
                         //Calculations to do re-sampling in order to fix small errors
                         final int correction = doPid(error);
-                        this.modifiedSpeed = 44100 + correction;
+                        this.modifiedSpeed = (int) (44100 + (correction * 44.1));
                         if (mainActivity != null) {
-                            if (this.currentChunk % 5 == 0) {
+                            if (this.currentChunk % 2 == 0) {
                                 mainActivity.setDelay((int) lastError, correction, clockService.getClockOffset(), currentChunk);
                             }
                         }
