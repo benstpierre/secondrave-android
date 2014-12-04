@@ -113,7 +113,9 @@ public class MediaPlayer implements Runnable {
                         final int correction = doPid(error);
                         this.modifiedSpeed = 44100 + correction;
                         if (mainActivity != null) {
-                            mainActivity.setDelay((int) lastError, correction, clockService.getClockOffset(), currentChunk);
+                            if (this.currentChunk % 5 == 0) {
+                                mainActivity.setDelay((int) lastError, correction, clockService.getClockOffset(), currentChunk);
+                            }
                         }
                     }
                 }

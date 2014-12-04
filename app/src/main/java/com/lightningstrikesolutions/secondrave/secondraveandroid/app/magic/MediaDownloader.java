@@ -51,25 +51,7 @@ public class MediaDownloader implements Runnable, DataCallback, WebSocket.String
 
             final InputStream inputStream = audioPiece.getAudioData().newInput();
 
-            boolean isFirstSampleInChunk = true;
-
-            int bytesRead = 0;
-            while (bytesRead != -1) {
-                final byte[] tmpData = new byte[4000];
-                bytesRead = inputStream.read(tmpData);
-                if (bytesRead == -1) {
-                    continue;
-                }
-                byte[] tmpData2;
-                if (bytesRead < 4000) {
-                    tmpData2 = new byte[bytesRead];
-                    System.arraycopy(tmpData, 0, tmpData, 0, bytesRead);
-                } else {
-                    tmpData2 = tmpData;
-                }
-                decodedAudioQueue.offer(new DecodedTimedAudioChunk(tmpData2, audioPiece.getPlayAt(), audioPiece.getDuration(), isFirstSampleInChunk));
-                isFirstSampleInChunk = false;
-            }
+            decodedAudioQueue.offer(new DecodedTimedAudioChunk(audioPiece.getAudioData().toByteArray(), audioPiece.getPlayAt(), audioPiece.getDuration(), true));
 
             inputStream.close();
         } catch (IOException e) {
