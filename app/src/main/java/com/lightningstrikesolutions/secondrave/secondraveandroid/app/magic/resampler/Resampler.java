@@ -53,7 +53,7 @@ public class Resampler {
             for (int channel = 0; channel < channels; channel++) {
                 final short[] currentChannelAmplitudes = new short[numSamples];
                 int index = 0;
-                for (int j = channel; j < sourceData.length - 1; j += bytePerSample) {
+                for (int j = (channel * bytePerSample); j < sourceData.length - 1; j += bytePerSample) {
                     short amplitude = 0;
                     for (int byteNumber = 0; byteNumber < bytePerSample; byteNumber++) {
                         // little endian
@@ -66,46 +66,44 @@ public class Resampler {
         }
 
 
-        short[] amplitudes = sourceDataByChannel.get(0);
+        final List<byte[]> resampledChannels = Lists.newArrayList();
+        for (int c = 0; c < channels; c++) {
 
-//        int pointer = 0;
-//        for (int i = 0; i < numSamples; i++) {
-//            short amplitude = 0;
-//            for (int byteNumber = 0; byteNumber < bytePerSample; byteNumber++) {
-//                // little endian
-//                amplitude |= (short) ((sourceData[pointer++] & 0xFF) << (byteNumber * 8));
-//            }
-//            amplitudes[i] = amplitude;
-//        }
-//        // end make the amplitudes
+            final short[] amplitudes = sourceDataByChannel.get(c);
 
-        // do interpolation
-        LinearInterpolation reSample = new LinearInterpolation();
-        short[] targetSample = reSample.interpolate(sourceRate, targetRate, amplitudes);
-        int targetLength = targetSample.length;
-        // end do interpolation
+            // do interpolation
+            final short[] targetSample = new LinearInterpolation().interpolate(sourceRate, targetRate, amplitudes);
+            final int targetLength = targetSample.length;
 
-        // TODO: Remove the high frequency signals with a digital filter, leaving a signal containing only half-sample-rated frequency information, but still sampled at a rate of target sample rate. Usually FIR is used
-
-        // end resample the amplitudes
-
-        // convert the amplitude to bytes
-        byte[] bytes;
-        if (bytePerSample == 1) {
-            bytes = new byte[targetLength];
-            for (int i = 0; i < targetLength; i++) {
-                bytes[i] = (byte) targetSample[i];
+            // convert the amplitude to bytes
+            final byte[] bytes;
+            if (bytePerSample == 1) {
+                bytes = new byte[targetLength];
+                for (int i = 0; i < targetLength; i++) {
+                    bytes[i] = (byte) targetSample[i];
+                }
+            } else {
+                // suppose bytePerSample==2
+                bytes = new byte[targetLength * 2];
+                for (int i = 0; i < targetSample.length; i++) {
+                    // little endian
+                    bytes[i * 2] = (byte) (targetSample[i] & 0xff);
+                    bytes[i * 2 + 1] = (byte) ((targetSample[i] >> 8) & 0xff);
+                }
             }
-        } else {
-            // suppose bytePerSample==2
-            bytes = new byte[targetLength * 2];
-            for (int i = 0; i < targetSample.length; i++) {
-                // little endian
-                bytes[i * 2] = (byte) (targetSample[i] & 0xff);
-                bytes[i * 2 + 1] = (byte) ((targetSample[i] >> 8) & 0xff);
-            }
+            resampledChannels.add(bytes);
         }
 
-        return bytes;
+        final int sizePerChannel = resampledChannels.get(0).length;
+        final byte[] result = new byte[sizePerChannel * channels];
+
+        int resultIndex = 0;
+        for (int i = 0; i < sizePerChannel - 2; i += 2) {
+            for (int c = 0; c < channels; c++) {
+                result[resultIndex++] = resampledChannels.get(c)[i];
+                result[resultIndex++] = resampledChannels.get(c)[i + 1];
+            }
+        }
+        return result;
     }
 }

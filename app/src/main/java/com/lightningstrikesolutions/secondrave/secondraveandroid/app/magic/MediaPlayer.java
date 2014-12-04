@@ -77,9 +77,9 @@ public class MediaPlayer implements Runnable {
         }
         final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
                 44100,
-                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.CHANNEL_OUT_STEREO,
                 AudioFormat.ENCODING_PCM_16BIT,
-                AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT),
+                AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT),
                 AudioTrack.MODE_STREAM);
         keepPlaying.set(true);
         audioTrack.play();
