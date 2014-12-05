@@ -100,7 +100,7 @@ public class SecondRaveApplication extends Application {
         this.mediaDownloader = new MediaDownloader(decodedAudioQueue, mainActivity, mainActivity.getHost());
         new Thread(threadGroup, mediaDownloader, "Media Downloader").start();
         //Start Media Player
-        this.mediaPlayer = new MediaPlayer(decodedAudioQueue, mainActivity, getAudioLatency(), clockService);
+        this.mediaPlayer = new MediaPlayer(decodedAudioQueue, mainActivity, clockService);
         new Thread(threadGroup, mediaPlayer, "Media Player").start();
         this.partyChanging.set(false);
         this.partyStarted.set(true);

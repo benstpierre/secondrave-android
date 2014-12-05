@@ -20,15 +20,13 @@ public class MediaPlayer implements Runnable {
     private final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue;
     private final AtomicBoolean keepPlaying = new AtomicBoolean();
     private MainActivity mainActivity;
-    private final int driverDelayMs;
     private final ClockService clockService;
     private int modifiedSpeed;
     private int currentChunk;
 
-    public MediaPlayer(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity, int driverDelayMs, ClockService clockService) {
+    public MediaPlayer(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity, ClockService clockService) {
         this.decodedAudioQueue = decodedAudioQueue;
         this.mainActivity = mainActivity;
-        this.driverDelayMs = driverDelayMs;
         this.clockService = clockService;
     }
 
