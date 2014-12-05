@@ -98,7 +98,7 @@ public class Resampler {
         final byte[] result = new byte[sizePerChannel * channels];
 
         int resultIndex = 0;
-        for (int i = 0; i < sizePerChannel - 2; i += 2) {
+        for (int i = 0; i < sizePerChannel; i += 2) {
             for (int c = 0; c < channels; c++) {
                 result[resultIndex++] = resampledChannels.get(c)[i];
                 result[resultIndex++] = resampledChannels.get(c)[i + 1];

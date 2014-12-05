@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class MediaPlayer implements Runnable {
 
-
+    private static final int AUDIO_MODE = AudioFormat.CHANNEL_OUT_STEREO;
     private static final String TAG = "MediaPlayer";
     private final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue;
     private final AtomicBoolean keepPlaying = new AtomicBoolean();
@@ -77,9 +77,9 @@ public class MediaPlayer implements Runnable {
         }
         final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
                 44100,
-                AudioFormat.CHANNEL_OUT_STEREO,
+                AUDIO_MODE,
                 AudioFormat.ENCODING_PCM_16BIT,
-                AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT),
+                AudioTrack.getMinBufferSize(44100, AUDIO_MODE, AudioFormat.ENCODING_PCM_16BIT),
                 AudioTrack.MODE_STREAM);
         keepPlaying.set(true);
         audioTrack.play();
