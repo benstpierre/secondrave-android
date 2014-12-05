@@ -54,6 +54,6 @@
             android:id="@+id/txtHost"
             android:layout_alignParentTop="true" android:layout_toStartOf="@+id/btnStartTheParty"
             android:layout_alignEnd="@+id/connectionMessages" android:layout_alignParentStart="true"
-            android:hint="Host" android:gravity="center_vertical"/>
+            android:hint="Host" android:gravity="center_vertical" android:inputType="textUri"/>
 
 </RelativeLayout>
