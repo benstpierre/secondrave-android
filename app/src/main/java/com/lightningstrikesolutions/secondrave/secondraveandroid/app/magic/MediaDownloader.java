@@ -1,5 +1,6 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
+import android.util.Log;
 import com.google.protobuf.ByteString;
 import com.koushikdutta.async.ByteBufferList;
 import com.koushikdutta.async.DataEmitter;
@@ -20,6 +21,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class MediaDownloader implements Runnable, DataCallback, WebSocket.StringCallback {
 
 
+    private static final String TAG = "MediaDownloader";
     private final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue;
     private Future<WebSocket> webSocket;
 
@@ -34,6 +36,7 @@ public class MediaDownloader implements Runnable, DataCallback, WebSocket.String
             @Override
             public void onCompleted(Exception ex, WebSocket webSocket) {
                 if (ex != null) {
+                    Log.e(TAG, "Unable to open websocket", ex);
                     ex.printStackTrace();
                     return;
                 }
