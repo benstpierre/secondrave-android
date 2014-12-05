@@ -25,17 +25,19 @@ public class MediaDownloader implements Runnable, DataCallback, WebSocket.String
 
     private static final String TAG = "MediaDownloader";
     private final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue;
+    private final String host;
     private Future<WebSocket> webSocket;
     private MainActivity mainActivity;
 
-    public MediaDownloader(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity) {
+    public MediaDownloader(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity, String host) {
         this.decodedAudioQueue = decodedAudioQueue;
         this.mainActivity = mainActivity;
+        this.host = host;
     }
 
     @Override
     public void run() {
-        final String uri = "http://" + MainActivity.HOST + ":8080/events";
+        final String uri = "http://" + host + ":8080/events";
         final AsyncHttpClient asyncHttpClient = AsyncHttpClient.getDefaultInstance();
         final AsyncHttpGet get = new AsyncHttpGet(uri.replace("ws://", "http://").replace("wss://", "https://"));
         get.setTimeout(5000);
@@ -59,7 +61,7 @@ public class MediaDownloader implements Runnable, DataCallback, WebSocket.String
         Log.e(TAG, "Unable to open websocket", ex);
         if (this.mainActivity != null) {
             if (ex instanceof TimeoutException) {
-                this.mainActivity.showMessage("Unable to connect to host @" + MainActivity.HOST);
+                this.mainActivity.showMessage("Unable to connect to host @" + this.host);
             } else if (ex.getMessage() != null) {
                 this.mainActivity.showMessage(ex.getMessage());
             } else {

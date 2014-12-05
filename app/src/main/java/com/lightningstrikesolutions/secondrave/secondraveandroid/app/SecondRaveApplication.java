@@ -5,7 +5,10 @@ import android.content.Context;
 import android.media.AudioManager;
 import android.util.Log;
 import com.google.common.collect.Queues;
-import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.*;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.ClockService;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.DecodedTimedAudioChunk;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.MediaDownloader;
+import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.MediaPlayer;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -89,12 +92,12 @@ public class SecondRaveApplication extends Application {
         //Setup new decoded audio queue
         final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue = Queues.newConcurrentLinkedQueue();
 
-        this.clockService = new ClockService(this.getAudioLatency());
+        this.clockService = new ClockService(this.getAudioLatency(), mainActivity.getHost());
         new Thread(clockService).start();
 
         final ThreadGroup threadGroup = new ThreadGroup("Audio Threads");
         //Start Media Downloader/decoder
-        this.mediaDownloader = new MediaDownloader(decodedAudioQueue,mainActivity);
+        this.mediaDownloader = new MediaDownloader(decodedAudioQueue, mainActivity, mainActivity.getHost());
         new Thread(threadGroup, mediaDownloader, "Media Downloader").start();
         //Start Media Player
         this.mediaPlayer = new MediaPlayer(decodedAudioQueue, mainActivity, getAudioLatency(), clockService);

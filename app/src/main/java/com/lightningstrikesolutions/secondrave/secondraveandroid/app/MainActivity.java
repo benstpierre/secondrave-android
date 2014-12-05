@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import java.io.IOException;
@@ -15,7 +16,6 @@ public class MainActivity extends Activity {
     private static final String TAG = "MainActivity";
     private static final String DIAGNOSTICS_STRING = "DIAGNOSTICS_STRING";
     private static final String CONNECTION_MESSAGE_STRING = "CONNECTION_MESSAGE_STRING";
-    public static final String HOST = "192.168.1.91";
 
 
     private View btnStartTheParty;
@@ -23,6 +23,7 @@ public class MainActivity extends Activity {
     private TextView txtDelay;
     private TextView txtConnectionMessage;
     private SecondRaveApplication application;
+    private EditText txtHost;
 
 
     @Override
@@ -34,6 +35,7 @@ public class MainActivity extends Activity {
         this.txtDelay = (TextView) findViewById(R.id.txtDelay);
         this.application = (SecondRaveApplication) getApplication();
         this.txtConnectionMessage = (TextView) findViewById(R.id.connectionMessages);
+        this.txtHost = (EditText) findViewById(R.id.txtHost);
         if (this.application.getMediaPlayer() != null) {
             this.application.getMediaPlayer().setActivity(this);
         }
@@ -62,6 +64,7 @@ public class MainActivity extends Activity {
             public void run() {
                 MainActivity.this.btnStartTheParty.setEnabled(!application.getPartyStarted().get() && !application.getPartyChanging().get());
                 MainActivity.this.btnStopTheParty.setEnabled(application.getPartyStarted().get() && !application.getPartyChanging().get());
+                MainActivity.this.txtHost.setEnabled(!application.getPartyStarted().get() && !application.getPartyChanging().get());
                 if (!application.getPartyStarted().get()) {
                     MainActivity.this.txtDelay.setText("");
                 }
@@ -133,5 +136,9 @@ public class MainActivity extends Activity {
                 MainActivity.this.txtConnectionMessage.setText(message);
             }
         });
+    }
+
+    public String getHost() {
+        return this.txtHost.getText().toString();
     }
 }

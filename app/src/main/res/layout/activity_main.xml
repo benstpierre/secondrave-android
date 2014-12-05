@@ -48,5 +48,12 @@
             android:layout_alignParentStart="true" android:layout_above="@+id/btnStopTheParty"
             android:layout_alignEnd="@+id/txtDelay"
             android:gravity="center_vertical|center"/>
+    <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/txtHost"
+            android:layout_alignParentTop="true" android:layout_toStartOf="@+id/btnStartTheParty"
+            android:layout_alignEnd="@+id/connectionMessages" android:layout_alignParentStart="true"
+            android:hint="Host" android:gravity="center_vertical"/>
 
 </RelativeLayout>

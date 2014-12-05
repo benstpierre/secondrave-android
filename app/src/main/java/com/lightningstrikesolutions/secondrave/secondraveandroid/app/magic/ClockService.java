@@ -1,7 +1,6 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
 import android.util.Log;
-import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
 import org.apache.commons.net.ntp.NTPUDPClient;
 import org.apache.commons.net.ntp.TimeInfo;
 
@@ -17,20 +16,21 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ClockService implements Runnable {
 
     private static final String TAG = "ClockService";
+    private final String host;
     private AtomicBoolean keepGoing = new AtomicBoolean(true);
     private AtomicLong clockOffset = new AtomicLong(0);
-    private static final String NTP_HOST = MainActivity.HOST;
     private final long audioCardDelay;
 
-    public ClockService(long audioCardDelay) {
+    public ClockService(long audioCardDelay, String host) {
         this.audioCardDelay = audioCardDelay;
+        this.host = host;
     }
 
     @Override
     public void run() {
         while (keepGoing.get()) {
             try {
-                timeTCP(NTP_HOST);
+                timeTCP(host);
                 Thread.sleep(10 * 1000);
             } catch (IOException e) {
                 throw new RuntimeException(e);
