@@ -14,12 +14,14 @@ public class MainActivity extends Activity {
 
     private static final String TAG = "MainActivity";
     private static final String DIAGNOSTICS_STRING = "DIAGNOSTICS_STRING";
-    public static final String HOST = "10.0.1.13";
+    private static final String CONNECTION_MESSAGE_STRING = "CONNECTION_MESSAGE_STRING";
+    public static final String HOST = "192.168.1.91";
 
 
     private View btnStartTheParty;
     private View btnStopTheParty;
     private TextView txtDelay;
+    private TextView txtConnectionMessage;
     private SecondRaveApplication application;
 
 
@@ -31,13 +33,19 @@ public class MainActivity extends Activity {
         this.btnStopTheParty = findViewById(R.id.btnStopTheParty);
         this.txtDelay = (TextView) findViewById(R.id.txtDelay);
         this.application = (SecondRaveApplication) getApplication();
+        this.txtConnectionMessage = (TextView) findViewById(R.id.connectionMessages);
         if (this.application.getMediaPlayer() != null) {
             this.application.getMediaPlayer().setActivity(this);
+        }
+        if (this.application.getMediaDownloader() != null) {
+            this.application.getMediaDownloader().setActivity(this);
         }
         bindUi();
         if (savedInstanceState != null) {
             final String diagnosticsString = savedInstanceState.getString(DIAGNOSTICS_STRING);
             this.txtDelay.setText(diagnosticsString == null ? "" : diagnosticsString);
+            final String connectionMessage = savedInstanceState.getString(CONNECTION_MESSAGE_STRING);
+            this.txtConnectionMessage.setText(connectionMessage == null ? "" : connectionMessage);
         }
     }
 
@@ -45,6 +53,7 @@ public class MainActivity extends Activity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString(DIAGNOSTICS_STRING, String.valueOf(this.txtDelay.getText()));
+        outState.putString(CONNECTION_MESSAGE_STRING, String.valueOf(this.txtConnectionMessage.getText()));
     }
 
     private void bindUi() {
@@ -115,5 +124,14 @@ public class MainActivity extends Activity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         return id == R.id.action_settings || super.onOptionsItemSelected(item);
+    }
+
+    public void showMessage(final String message) {
+        MainActivity.this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.txtConnectionMessage.setText(message);
+            }
+        });
     }
 }

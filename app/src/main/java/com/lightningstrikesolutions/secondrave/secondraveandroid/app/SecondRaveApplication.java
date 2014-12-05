@@ -29,10 +29,10 @@ public class SecondRaveApplication extends Application {
         try {
             Method m = am.getClass().getMethod("getOutputLatency", int.class);
             Integer result = (Integer) m.invoke(am, AudioManager.STREAM_MUSIC);
-            Log.e(TAG, "AudioLatency is " + result);
+            Log.i(TAG, "AudioLatency is " + result);
             return result;
         } catch (Exception e) {
-            Log.e(TAG, "AudioLatency is unknown defaulting to 0");
+            Log.w(TAG, "AudioLatency is unknown defaulting to 0");
             return 0;
         }
     }
@@ -94,7 +94,7 @@ public class SecondRaveApplication extends Application {
 
         final ThreadGroup threadGroup = new ThreadGroup("Audio Threads");
         //Start Media Downloader/decoder
-        this.mediaDownloader = new MediaDownloader(decodedAudioQueue);
+        this.mediaDownloader = new MediaDownloader(decodedAudioQueue,mainActivity);
         new Thread(threadGroup, mediaDownloader, "Media Downloader").start();
         //Start Media Player
         this.mediaPlayer = new MediaPlayer(decodedAudioQueue, mainActivity, getAudioLatency(), clockService);

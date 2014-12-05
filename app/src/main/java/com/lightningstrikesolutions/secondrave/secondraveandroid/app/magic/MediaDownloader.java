@@ -7,6 +7,7 @@ import com.koushikdutta.async.DataEmitter;
 import com.koushikdutta.async.callback.DataCallback;
 import com.koushikdutta.async.future.Future;
 import com.koushikdutta.async.http.AsyncHttpClient;
+import com.koushikdutta.async.http.AsyncHttpGet;
 import com.koushikdutta.async.http.WebSocket;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
 import com.secondrave.protos.SecondRaveProtos;
@@ -14,6 +15,7 @@ import com.secondrave.protos.SecondRaveProtos;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Created by benstpierre on 14-10-27.
@@ -24,26 +26,46 @@ public class MediaDownloader implements Runnable, DataCallback, WebSocket.String
     private static final String TAG = "MediaDownloader";
     private final ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue;
     private Future<WebSocket> webSocket;
+    private MainActivity mainActivity;
 
-    public MediaDownloader(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue) {
+    public MediaDownloader(ConcurrentLinkedQueue<DecodedTimedAudioChunk> decodedAudioQueue, MainActivity mainActivity) {
         this.decodedAudioQueue = decodedAudioQueue;
+        this.mainActivity = mainActivity;
     }
 
     @Override
     public void run() {
-        final String url = "http://" + MainActivity.HOST + ":8080/events";
-        this.webSocket = AsyncHttpClient.getDefaultInstance().websocket(url, "my-protocol", new AsyncHttpClient.WebSocketConnectCallback() {
+        final String uri = "http://" + MainActivity.HOST + ":8080/events";
+        final AsyncHttpClient asyncHttpClient = AsyncHttpClient.getDefaultInstance();
+        final AsyncHttpGet get = new AsyncHttpGet(uri.replace("ws://", "http://").replace("wss://", "https://"));
+        get.setTimeout(5000);
+        this.mainActivity.showMessage("Connecting...");
+        this.webSocket = asyncHttpClient.websocket(get, "my-protocol", new AsyncHttpClient.WebSocketConnectCallback() {
             @Override
             public void onCompleted(Exception ex, WebSocket webSocket) {
                 if (ex != null) {
-                    Log.e(TAG, "Unable to open websocket", ex);
-                    ex.printStackTrace();
+                    doError(ex, webSocket);
                     return;
+                } else {
+                    MediaDownloader.this.mainActivity.showMessage("Connected");
                 }
                 webSocket.setStringCallback(MediaDownloader.this);
                 webSocket.setDataCallback(MediaDownloader.this);
             }
         });
+    }
+
+    private void doError(Exception ex, WebSocket webSocket) {
+        Log.e(TAG, "Unable to open websocket", ex);
+        if (this.mainActivity != null) {
+            if (ex instanceof TimeoutException) {
+                this.mainActivity.showMessage("Unable to connect to host @" + MainActivity.HOST);
+            } else if (ex.getMessage() != null) {
+                this.mainActivity.showMessage(ex.getMessage());
+            } else {
+                this.mainActivity.showMessage("Unknown error" + ex.getClass().getName());
+            }
+        }
     }
 
     @Override
@@ -71,5 +93,9 @@ public class MediaDownloader implements Runnable, DataCallback, WebSocket.String
 
     public void stop() {
         this.webSocket.cancel();
+    }
+
+    public void setActivity(MainActivity activity) {
+        this.mainActivity = activity;
     }
 }

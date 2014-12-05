@@ -40,5 +40,13 @@
             android:layout_alignParentStart="true"
             android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"/>
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:id="@+id/connectionMessages" android:layout_below="@+id/btnStartTheParty"
+            android:layout_alignParentStart="true" android:layout_above="@+id/btnStopTheParty"
+            android:layout_alignEnd="@+id/txtDelay"
+            android:gravity="center_vertical|center"/>
 
 </RelativeLayout>
