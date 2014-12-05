@@ -1,12 +1,15 @@
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
+import com.google.common.base.Strings;
 
 import java.io.IOException;
 
@@ -36,6 +39,10 @@ public class MainActivity extends Activity {
         this.application = (SecondRaveApplication) getApplication();
         this.txtConnectionMessage = (TextView) findViewById(R.id.connectionMessages);
         this.txtHost = (EditText) findViewById(R.id.txtHost);
+        final String lastHost = readHost();
+        if (!Strings.isNullOrEmpty(lastHost)) {
+            this.txtHost.setText(lastHost);
+        }
         if (this.application.getMediaPlayer() != null) {
             this.application.getMediaPlayer().setActivity(this);
         }
@@ -87,6 +94,7 @@ public class MainActivity extends Activity {
 
 
     public void startTheParty(View view) throws IOException {
+        saveHost();
         this.application.getPartyChanging().set(true);
         this.application.getPartyStarted().set(true);
         bindUi();
@@ -97,6 +105,18 @@ public class MainActivity extends Activity {
                 bindUi();
             }
         }).start();
+    }
+
+    private void saveHost() {
+        final SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        final SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(getString(R.string.preference_lasthost_key), getHost());
+        editor.apply();
+    }
+
+    private String readHost() {
+        final SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        return sharedPref.getString(getString(R.string.preference_lasthost_key), "");
     }
 
 
