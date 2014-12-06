@@ -5,7 +5,6 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Process;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
-import com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.resampler.Resampler;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;

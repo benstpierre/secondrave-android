@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic.resampler;
+package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
 import com.google.common.collect.Lists;
 
@@ -27,8 +27,7 @@ import java.util.List;
  */
 public class Resampler {
 
-    public Resampler() {
-    }
+    private short[] currentChannelAmplitudes;
 
     /**
      * Do resampling. Currently the amplitude is stored by short such that maximum bitsPerSample is 16 (bytePerSample is 2)
@@ -51,7 +50,9 @@ public class Resampler {
         final List<short[]> sourceDataByChannel = Lists.newArrayList();
         {
             for (int channel = 0; channel < channels; channel++) {
-                final short[] currentChannelAmplitudes = new short[numSamples];
+                if (this.currentChannelAmplitudes == null || this.currentChannelAmplitudes.length != numSamples) {
+                    this.currentChannelAmplitudes = new short[numSamples];
+                }
                 int index = 0;
                 for (int j = (channel * bytePerSample); j < sourceData.length - 1; j += bytePerSample) {
                     short amplitude = 0;
@@ -72,7 +73,7 @@ public class Resampler {
             final short[] amplitudes = sourceDataByChannel.get(c);
 
             // do interpolation
-            final short[] targetSample = new LinearInterpolation().interpolate(sourceRate, targetRate, amplitudes);
+            final short[] targetSample = interpolate(sourceRate, targetRate, amplitudes);
             final int targetLength = targetSample.length;
 
             // convert the amplitude to bytes
@@ -105,5 +106,44 @@ public class Resampler {
             }
         }
         return result;
+    }
+
+
+    /**
+     * Do interpolation on the samples according to the original and destinated sample rates
+     *
+     * @param oldSampleRate sample rate of the original samples
+     * @param newSampleRate sample rate of the interpolated samples
+     * @param samples       original samples
+     * @return interpolated samples
+     */
+    public static short[] interpolate(int oldSampleRate, int newSampleRate, short[] samples) {
+
+        if (oldSampleRate == newSampleRate) {
+            return samples;
+        }
+
+        int newLength = (int) Math.round(((float) samples.length / oldSampleRate * newSampleRate));
+        float lengthMultiplier = (float) newLength / samples.length;
+        short[] interpolatedSamples = new short[newLength];
+
+        // interpolate the value by the linear equation y=mx+c
+        for (int i = 0; i < newLength; i++) {
+
+            // get the nearest positions for the interpolated point
+            float currentPosition = i / lengthMultiplier;
+            int nearestLeftPosition = (int) currentPosition;
+            int nearestRightPosition = nearestLeftPosition + 1;
+            if (nearestRightPosition >= samples.length) {
+                nearestRightPosition = samples.length - 1;
+            }
+
+            float slope = samples[nearestRightPosition] - samples[nearestLeftPosition];     // delta x is 1
+            float positionFromLeft = currentPosition - nearestLeftPosition;
+
+            interpolatedSamples[i] = (short) (slope * positionFromLeft + samples[nearestLeftPosition]);      // y=mx+c
+        }
+
+        return interpolatedSamples;
     }
 }
