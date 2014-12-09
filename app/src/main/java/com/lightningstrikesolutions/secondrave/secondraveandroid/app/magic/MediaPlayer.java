@@ -69,11 +69,13 @@ public class MediaPlayer implements Runnable {
             throw new RuntimeException(e);
         }
         final Resampler resampler = new Resampler();
+
+        final int audioBufferSize = AudioTrack.getMinBufferSize(44100, AUDIO_MODE, AudioFormat.ENCODING_PCM_16BIT);
         final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
                 44100,
                 AUDIO_MODE,
                 AudioFormat.ENCODING_PCM_16BIT,
-                AudioTrack.getMinBufferSize(44100, AUDIO_MODE, AudioFormat.ENCODING_PCM_16BIT),
+                audioBufferSize * 2,
                 AudioTrack.MODE_STREAM);
         keepPlaying.set(true);
         audioTrack.play();
