@@ -73,6 +73,9 @@ public class MainActivity extends Activity {
                 MainActivity.this.btnStopTheParty.setEnabled(application.getPartyStarted().get() && !application.getPartyChanging().get());
                 MainActivity.this.txtHost.setEnabled(!application.getPartyStarted().get() && !application.getPartyChanging().get());
                 if (!application.getPartyStarted().get()) {
+                    MainActivity.this.txtConnectionMessage.setText("");
+                }
+                if (!application.getPartyStarted().get()) {
                     MainActivity.this.txtDelay.setText("");
                 }
             }
