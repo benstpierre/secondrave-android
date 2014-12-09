@@ -14,6 +14,8 @@ import com.secondrave.protos.SecondRaveProtos;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeoutException;
 
@@ -78,7 +80,9 @@ public class MediaDownloader implements Runnable, DataCallback, WebSocket.String
 
             final InputStream inputStream = audioPiece.getAudioData().newInput();
 
-            decodedAudioQueue.offer(new DecodedTimedAudioChunk(audioPiece.getAudioData().toByteArray(), audioPiece.getPlayAt(), audioPiece.getDuration(), true));
+            final ByteBuffer byteBuffer = audioPiece.getAudioData().asReadOnlyByteBuffer();
+            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+            decodedAudioQueue.offer(new DecodedTimedAudioChunk(byteBuffer, audioPiece.getPlayAt(), audioPiece.getDuration(), true));
 
             inputStream.close();
         } catch (IOException e) {

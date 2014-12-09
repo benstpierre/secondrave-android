@@ -6,6 +6,7 @@ import android.media.AudioTrack;
 import android.os.Process;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -34,8 +35,8 @@ public class MediaPlayer implements Runnable {
         return System.currentTimeMillis() + clockService.getClockOffset();
     }
 
-    private static final int MAX_CORRECTION = 44100 / 2;
-    private static final int MIN_CORRECTION = -1 * 44100 / 2;
+    private static final int MAX_SPEED = 44100 + (44100 / 2);
+    private static final int MIN_SPEED = 44100 / 2;
     private static final double P_GAIN = 0.3;
     private static final double I_GAIN = 0.0;
     private static final double D_GAIN = 0.0;
@@ -54,14 +55,8 @@ public class MediaPlayer implements Runnable {
         final double dCorrection = slope * D_GAIN;
         this.lastError = error; // save error for next loop
         final double pidCorrection = pCorrection + iCorrection + dCorrection;
-
-        if (pidCorrection > MAX_CORRECTION) {
-            return MAX_CORRECTION;
-        } else if (pidCorrection < MIN_CORRECTION) {
-            return MIN_CORRECTION;
-        } else {
-            return (int) pidCorrection;
-        }
+        //Get theoretical pid correction
+        return (int) pidCorrection;
     }
 
     @Override
@@ -109,6 +104,11 @@ public class MediaPlayer implements Runnable {
                         //Calculations to do re-sampling in order to fix small errors
                         final int correction = doPid(error);
                         this.modifiedSpeed = (int) (44100 + (correction * 44.1));
+                        if (this.modifiedSpeed < 22050) {
+                            this.modifiedSpeed = MIN_SPEED;
+                        } else if (this.modifiedSpeed > 44100 + 22050) {
+                            this.modifiedSpeed = MAX_SPEED;
+                        }
                         if (mainActivity != null) {
                             if (this.currentChunk % 2 == 0) {
                                 mainActivity.setDelay((int) lastError, correction, clockService.getClockOffset(), currentChunk);
@@ -117,8 +117,11 @@ public class MediaPlayer implements Runnable {
                     }
                 }
                 decodedAudioQueue.poll();//Remove the head of the queue as we are about to play the audio chunk
-                final byte[] resampledAudio = new Resampler().reSample(decodedTimedAudioChunk.getPcmData(), 2, 16, 44100, modifiedSpeed);
-                audioTrack.write(resampledAudio, 0, resampledAudio.length);
+                final ByteBuffer resampledAudio = Resampler.reSample(decodedTimedAudioChunk.getPcmData(), 2, 16, 44100, modifiedSpeed);
+                resampledAudio.position(0);
+                final byte[] arr = new byte[resampledAudio.limit()];
+                resampledAudio.get(arr);
+                audioTrack.write(arr, 0, arr.length);
             }
         }
         //Stop music
