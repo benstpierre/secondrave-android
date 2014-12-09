@@ -16,11 +16,8 @@
 
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
-import com.google.common.collect.Lists;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.List;
 
 /**
  * Resample signal data (base on bytes)
@@ -40,85 +37,57 @@ public class Resampler {
      * @return re-sampled data
      */
     public static ByteBuffer reSample(ByteBuffer sourceData, int channels, int bitsPerSample, int sourceRate, int targetRate) {
-
-        // make the bytes to amplitudes first
+        if (sourceRate == targetRate) {
+            sourceData.position(0);
+            return sourceData;
+        }
+        //Handy calc, pretty much everything we do will be 16 bit audio (2 bytes)
         final int bytePerSample = bitsPerSample / 8;
-        //Determine size per channel in bytes
-        final int byteSizePerChannel = sourceData.capacity() / channels;
 
-        //Split each channel into its own byte array
-        final List<ByteBuffer> sourceDataByChannel = Lists.newArrayList();
-        for (int channel = 0; channel < channels; channel++) {
-            final ByteBuffer currentChannelData = ByteBuffer.allocate(byteSizePerChannel);
-            currentChannelData.order(ByteOrder.LITTLE_ENDIAN);
-            for (int i = channel * bytePerSample; i + 1 < sourceData.capacity(); i += channels * bytePerSample) {
-                currentChannelData.putShort(sourceData.getShort(i));
-            }
-            sourceDataByChannel.add(currentChannelData);
-        }
+        final int originalSampleCount = sourceData.capacity() / bytePerSample / channels;
 
-        final List<ByteBuffer> resampledChannels = Lists.newArrayList();
-        for (int channel = 0; channel < channels; channel++) {
-            resampledChannels.add(interpolate(sourceRate, targetRate, sourceDataByChannel.get(channel)));
-        }
-
-        final int sizePerChannel = resampledChannels.get(0).capacity();
-
-        final ByteBuffer result = ByteBuffer.allocate(sizePerChannel * channels);
-        result.order(ByteOrder.LITTLE_ENDIAN);
-
-        for (int i = 0; i + 1 < sizePerChannel; i += 2) {
-            for (int c = 0; c < channels; c++) {
-                final short sample = resampledChannels.get(c).getShort(i);
-                result.putShort(sample);
-            }
-        }
-        return result;
-    }
-
-
-    /**
-     * Do interpolation on the samples according to the original and destinated sample rates
-     *
-     * @param oldSampleRate sample rate of the original samples
-     * @param newSampleRate sample rate of the interpolated samples
-     * @param samples       original samples
-     * @return interpolated samples
-     */
-    public static ByteBuffer interpolate(int oldSampleRate, int newSampleRate, ByteBuffer samples) {
-
-        if (oldSampleRate == newSampleRate) {
-            return samples;
-        }
-        final int originalSampleCount = samples.capacity() / 2;
-
-        final int newSampleCount = Math.round((float) originalSampleCount / oldSampleRate * newSampleRate);
-        //Allocate output buffer as we know 1 sample = 2 bytes
-        final ByteBuffer interpolatedSamples = ByteBuffer.allocate(newSampleCount * 2);
+        final int newSampleCount = Math.round((float) originalSampleCount / sourceRate * targetRate);
+        //Allocate output buffer given known sample count and bytesperchannel
+        final ByteBuffer interpolatedSamples = ByteBuffer.allocate(newSampleCount * bytePerSample * channels);
         interpolatedSamples.order(ByteOrder.LITTLE_ENDIAN);
         //Needs to be float
         final float lengthMultiplier = (float) newSampleCount / originalSampleCount;
 
+        final int frameSize = channels * bytePerSample;
+
         // interpolate the value by the linear equation y=mx+c
         for (int i = 0; i < newSampleCount; i++) {
+            final int frameStart = frameSize * i;
+            for (int channel = 0; channel < channels; channel++) {
 
-            final float currentSamplePosition = i / lengthMultiplier;
-            // get the nearest positions for the interpolated point
-            final int nearestLeftSamplePosition = (int) currentSamplePosition;
+                final float currentSamplePosition = i / lengthMultiplier;
+                // get the nearest positions for the interpolated point
+                final int nearestLeftSamplePosition = (int) currentSamplePosition;
 
-            int nearestRightSamplePosition = nearestLeftSamplePosition + 1;
-            if (nearestRightSamplePosition >= originalSampleCount) {
-                nearestRightSamplePosition = originalSampleCount - 1;
+                int nearestRightSamplePosition = nearestLeftSamplePosition + 1;
+                if (nearestRightSamplePosition >= originalSampleCount) {
+                    nearestRightSamplePosition = originalSampleCount - 1;
+                }
+
+                final short nearestRightSample = sourceData.getShort(findIndex(nearestRightSamplePosition, channel, frameSize, bytePerSample));
+                final short nearestLeftSample = sourceData.getShort(findIndex(nearestLeftSamplePosition, channel, frameSize, bytePerSample));
+
+                final float slope = nearestRightSample - nearestLeftSample;     // delta x is 1
+                float positionFromLeft = currentSamplePosition - nearestLeftSamplePosition;
+
+                final short shortAtLocation = (short) (slope * positionFromLeft + nearestLeftSample);      // y=mx+c
+
+                interpolatedSamples.putShort(shortAtLocation);
             }
-
-            final short nearestRightSample = samples.getShort(nearestRightSamplePosition * 2);
-            final short nearestLeftSample = samples.getShort(nearestLeftSamplePosition * 2);
-            final float slope = nearestRightSample - nearestLeftSample;     // delta x is 1
-            float positionFromLeft = currentSamplePosition - nearestLeftSamplePosition;
-
-            final short shortAtLocation = (short) (slope * positionFromLeft + nearestLeftSample);      // y=mx+c
-            interpolatedSamples.putShort(i * 2, shortAtLocation);
         }
+        interpolatedSamples.position(0);
         return interpolatedSamples;
     }
+
+
+    private static int findIndex(int sampleNumber, int channel, int frameSize, int bytesPerSample) {
+        final int frameStart = frameSize * sampleNumber;
+        return frameStart + (channel * bytesPerSample);
+    }
+
 }
