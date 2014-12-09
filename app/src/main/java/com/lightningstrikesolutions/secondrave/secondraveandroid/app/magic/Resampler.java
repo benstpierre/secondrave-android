@@ -16,6 +16,8 @@
 
 package com.lightningstrikesolutions.secondrave.secondraveandroid.app.magic;
 
+import android.util.Pair;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -27,6 +29,8 @@ import java.nio.ByteOrder;
 public class Resampler {
 
 
+    private ByteBuffer interpolatedSamples;
+
     /**
      * Do resampling. Currently the amplitude is stored by short such that maximum bitsPerSample is 16 (bytePerSample is 2)
      *
@@ -36,20 +40,23 @@ public class Resampler {
      * @param targetRate    Sample rate of the target data
      * @return re-sampled data
      */
-    public static ByteBuffer reSample(ByteBuffer sourceData, int channels, int bitsPerSample, int sourceRate, int targetRate) {
-        if (sourceRate == targetRate) {
-            sourceData.position(0);
-            return sourceData;
-        }
+    public Pair<ByteBuffer, Integer> reSample(ByteBuffer sourceData, int channels, int bitsPerSample, int sourceRate, int targetRate) {
         //Handy calc, pretty much everything we do will be 16 bit audio (2 bytes)
         final int bytePerSample = bitsPerSample / 8;
 
+        //Get original sample count
         final int originalSampleCount = sourceData.capacity() / bytePerSample / channels;
 
         final int newSampleCount = Math.round((float) originalSampleCount / sourceRate * targetRate);
-        //Allocate output buffer given known sample count and bytesperchannel
-        final ByteBuffer interpolatedSamples = ByteBuffer.allocate(newSampleCount * bytePerSample * channels);
-        interpolatedSamples.order(ByteOrder.LITTLE_ENDIAN);
+        final int outputByteSize = newSampleCount * bytePerSample * channels;
+        //Allocate output buffer given known min buffer size (x2)
+        if (this.interpolatedSamples == null || this.interpolatedSamples.capacity() < outputByteSize) {
+            this.interpolatedSamples = ByteBuffer.allocate(outputByteSize * 2);
+            interpolatedSamples.order(ByteOrder.LITTLE_ENDIAN);
+        } else {
+            //Reset the re-used byte buffer position
+            interpolatedSamples.position(0);
+        }
         //Needs to be float
         final float lengthMultiplier = (float) newSampleCount / originalSampleCount;
 
@@ -81,7 +88,7 @@ public class Resampler {
             }
         }
         interpolatedSamples.position(0);
-        return interpolatedSamples;
+        return new Pair<ByteBuffer, Integer>(interpolatedSamples, outputByteSize);
     }
 
 

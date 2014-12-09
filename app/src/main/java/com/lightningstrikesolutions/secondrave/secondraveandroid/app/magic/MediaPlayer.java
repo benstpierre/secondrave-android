@@ -4,6 +4,7 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Process;
+import android.util.Pair;
 import com.lightningstrikesolutions.secondrave.secondraveandroid.app.MainActivity;
 
 import java.nio.ByteBuffer;
@@ -67,6 +68,7 @@ public class MediaPlayer implements Runnable {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        final Resampler resampler = new Resampler();
         final AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
                 44100,
                 AUDIO_MODE,
@@ -117,11 +119,8 @@ public class MediaPlayer implements Runnable {
                     }
                 }
                 decodedAudioQueue.poll();//Remove the head of the queue as we are about to play the audio chunk
-                final ByteBuffer resampledAudio = Resampler.reSample(decodedTimedAudioChunk.getPcmData(), 2, 16, 44100, modifiedSpeed);
-                resampledAudio.position(0);
-                final byte[] arr = new byte[resampledAudio.limit()];
-                resampledAudio.get(arr);
-                audioTrack.write(arr, 0, arr.length);
+                final Pair<ByteBuffer, Integer> resampledAudio = resampler.reSample(decodedTimedAudioChunk.getPcmData(), 2, 16, 44100, modifiedSpeed);
+                audioTrack.write(resampledAudio.first.array(), 0, resampledAudio.second);
             }
         }
         //Stop music
